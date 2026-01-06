@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+    "phase0",
+    "phase1",
+    "phase2",
+    "phase3",
+    "phase4"
+]

@@ -71,21 +71,39 @@ fn main() {
 // but Plus, Subtract, Multiply, etc. have no values associated with it.
 #[derive(Debug, Clone)]
 enum Token {
-  Plus,
-  Subtract,
-  Multiply,
-  Divide,
-  Modulus,
-  Assign,
-  Num(i32),
-  Ident(String),
-  If,
-  While,
-  Read, 
-  Func,
-  Return,
-  Int,
-  End,
+    Func,
+    Return,
+    Int,
+    Print,
+    Read, 
+    While,
+    If,
+    Else,
+    Break,
+    Continue,
+    LeftParen,
+    RightParen,
+    LeftCurly,
+    RightCurly,
+    LeftBracket,
+    RightBracket,
+    Comma,
+    Semicolon,
+    Plus,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulus,
+    Assign,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Equality,
+    NotEqual,
+    Num(i32),
+    Ident(String),
+    End,
 }
 
 // In Rust, you can model the function behavior using the type system.
@@ -113,9 +131,151 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
     let c = bytes[i] as char;
 
     match c {
+    // whitespace 
+    ' ' | '\n' => {
+      i += 1;
+    }
+    // comments
+    '#' => {
+        while i < bytes.len() {
+        let comment = bytes[i] as char;
+        if comment != '\n'{
+            i += 1;
+        }
+        else {
+            break;
+        }
+      }
+    }
 
-    
+    '(' => {
+      tokens.push(Token::LeftParen);
+      i += 1;
+    }
 
+    ')' => {
+      tokens.push(Token::RightParen);
+      i += 1;
+    }
+
+    '{' => {
+      tokens.push(Token::LeftCurly);
+      i += 1;
+    }
+
+    '}' => {
+      tokens.push(Token::RightCurly);
+      i += 1;
+    }
+
+    '[' => {
+      tokens.push(Token::LeftBracket);
+      i += 1;
+    }
+
+    ']' => {
+      tokens.push(Token::RightBracket);
+      i += 1;
+    }
+
+    ',' => {
+      tokens.push(Token::Comma);
+      i += 1;
+    }
+
+    ';' => {
+      tokens.push(Token::Semicolon);
+      i += 1;
+    }
+
+    '+' => {
+      tokens.push(Token::Plus);
+      i += 1;
+    }
+
+    '-' => {
+      tokens.push(Token::Subtract);
+      i += 1;
+    }
+
+    '*' => {
+      tokens.push(Token::Multiply);
+      i += 1;
+    }
+
+    '/' => {
+      tokens.push(Token::Divide);
+      i += 1;
+    }
+
+    '%' => {
+      tokens.push(Token::Modulus);
+      i += 1;
+    }
+
+    // = and ==
+    '=' => {
+      i += 1;
+      if i < bytes.len() && bytes[i] as char == '=' {
+        tokens.push(Token::Equality);
+        i += 1;
+      } else {
+        tokens.push(Token::Assign);
+      }
+    }
+
+    // != or error if just !
+    '!' => {
+      i += 1;
+      if i < bytes.len() && bytes[i] as char == '=' {
+          tokens.push(Token::NotEqual);
+          i += 1;
+      } else {
+          return Err(format!("Unrecognized symbol '{}'", bytes[i]));
+      }
+    }
+
+    // < and <=
+    '<' => {
+      i += 1;
+      if i < bytes.len() && bytes[i] as char == '=' {
+        tokens.push(Token::LessEqual);
+        i += 1;
+      } else {
+        tokens.push(Token::Less);
+      }
+    }
+
+    // > and >=
+    '>' => {
+      i += 1;
+      if i < bytes.len() && bytes[i] as char == '=' {
+        tokens.push(Token::GreaterEqual);
+        i += 1;
+      } else {
+        tokens.push(Token::Greater);
+      }
+    }
+
+    // identifiers
+    'a'..='z' => {
+      let start = i;
+      i += 1;
+      while i < bytes.len() {
+        let letter = bytes[i] as char;
+        if letter >= 'a' && letter <= 'z' {
+          i += 1;
+        } else {
+          break;
+        }
+      }
+      let end = i;
+      let string_token = &code[start..end];
+      let token = create_identifier(string_token);
+      tokens.push(token)
+    }
+
+    // numbers
     '0'..='9' => {
       let start = i;
       i += 1;
@@ -123,6 +283,8 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
         let digit = bytes[i] as char;
         if digit >= '0' && digit <= '9' {
           i += 1;
+        } else if digit >= 'a' && digit <= 'z' {
+          return Err(format!("invalid identifier: {}", &code[start..=i]));
         } else {
           break;
         }
@@ -134,20 +296,7 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
       tokens.push(token);
     }
 
-    '+' => {
-      tokens.push(Token::Plus);
-      i += 1;
-    }
 
-    ' ' | '\n' => {
-      i += 1;
-    }
-
-    '#' => {
-        let start = i;
-      i += 1;
-      
-    }
 
     _ => {
       return Err(format!("Unrecognized symbol '{}'", c));
@@ -158,6 +307,22 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
 
   tokens.push(Token::End);
   return Ok(tokens);
+}
+
+fn create_identifier(code: &str) -> Token {
+  match code {
+    "func" => Token::Func,
+    "return" => Token::Return,
+    "int" => Token::Int,
+    "print" => Token::Print,
+    "read" => Token::Read,
+    "while" => Token::While,
+    "if" => Token::If,
+    "else" => Token::Else,
+    "break" => Token::Break,
+    "continue" => Token::Continue,
+    _ => Token::Ident(String::from(code)),
+  }
 }
 
 // writing tests!

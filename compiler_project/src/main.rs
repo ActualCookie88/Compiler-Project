@@ -137,14 +137,9 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
     }
     // comments
     '#' => {
-        while i < bytes.len() {
-        let comment = bytes[i] as char;
-        if comment != '\n'{
-            i += 1;
-        }
-        else {
-            break;
-        }
+      i += 1;
+      while i < bytes.len() && bytes[i] as char != '\n' {
+          i += 1;
       }
     }
 
@@ -231,7 +226,7 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
           tokens.push(Token::NotEqual);
           i += 1;
       } else {
-          return Err(format!("Unrecognized symbol '{}'", bytes[i]));
+          return Err("Unrecognized symbol '!'".to_string());
       }
     }
 
@@ -258,12 +253,12 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
     }
 
     // identifiers
-    'a'..='z' => {
+    'a'..='z' | 'A'..='Z' | '_' => {
       let start = i;
       i += 1;
       while i < bytes.len() {
-        let letter = bytes[i] as char;
-        if letter >= 'a' && letter <= 'z' {
+        let letter = bytes[i] as char; 
+        if letter.is_alphabetic() || letter == '_' || letter.is_numeric() {
           i += 1;
         } else {
           break;
@@ -283,8 +278,8 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
         let digit = bytes[i] as char;
         if digit >= '0' && digit <= '9' {
           i += 1;
-        } else if digit >= 'a' && digit <= 'z' {
-          return Err(format!("invalid identifier: {}", &code[start..=i]));
+        } else if digit.is_alphabetic() {
+          return Err(format!("Invalid identifier: {}", &code[start..i]));
         } else {
           break;
         }
@@ -295,8 +290,6 @@ fn lex(code: &str) -> Result<Vec<Token>, String> {
       let token = Token::Num(number_value);
       tokens.push(token);
     }
-
-
 
     _ => {
       return Err(format!("Unrecognized symbol '{}'", c));
@@ -354,8 +347,56 @@ mod tests {
         assert!(matches!(toks[3], Token::Plus));
         assert!(matches!(toks[4], Token::End));
 
+        let toks = lex("func return int print read while if else break continue").unwrap();
+        assert!(matches!(toks[0], Token::Func));
+        assert!(matches!(toks[1], Token::Return));
+        assert!(matches!(toks[2], Token::Int));
+        assert!(matches!(toks[3], Token::Print));
+        assert!(matches!(toks[4], Token::Read));
+        assert!(matches!(toks[5], Token::While));
+        assert!(matches!(toks[6], Token::If));
+        assert!(matches!(toks[7], Token::Else));
+        assert!(matches!(toks[8], Token::Break));
+        assert!(matches!(toks[9], Token::Continue));
+        assert!(matches!(toks[10], Token::End));
+
+        let toks = lex("( ) { } [ ] , ;").unwrap();
+        assert!(matches!(toks[0], Token::LeftParen));
+        assert!(matches!(toks[1], Token::RightParen));
+        assert!(matches!(toks[2], Token::LeftCurly));
+        assert!(matches!(toks[3], Token::RightCurly));
+        assert!(matches!(toks[4], Token::LeftBracket));
+        assert!(matches!(toks[5], Token::RightBracket));
+        assert!(matches!(toks[6], Token::Comma));
+        assert!(matches!(toks[7], Token::Semicolon));
+        assert!(matches!(toks[8], Token::End));
+
+        let toks = lex("+ - * / %").unwrap();
+        assert!(matches!(toks[0], Token::Plus));
+        assert!(matches!(toks[1], Token::Subtract));
+        assert!(matches!(toks[2], Token::Multiply));
+        assert!(matches!(toks[3], Token::Divide));
+        assert!(matches!(toks[4], Token::Modulus));
+        assert!(matches!(toks[5], Token::End));
+
+        let toks = lex("= < <= > >= == !=").unwrap();
+        assert!(matches!(toks[0], Token::Assign));
+        assert!(matches!(toks[1], Token::Less));
+        assert!(matches!(toks[2], Token::LessEqual));
+        assert!(matches!(toks[3], Token::Greater));
+        assert!(matches!(toks[4], Token::GreaterEqual));
+        assert!(matches!(toks[5], Token::Equality));
+        assert!(matches!(toks[6], Token::NotEqual));
+        assert!(matches!(toks[7], Token::End));
+
+        let toks = lex("var_1 = 32;").unwrap();
+        assert!(matches!(toks[0], Token::Ident(ref s) if s == "var_1"));
+        assert!(matches!(toks[1], Token::Assign));
+        assert!(matches!(toks[2], Token::Num(32)));
+        assert!(matches!(toks[3], Token::Semicolon));
+        assert!(matches!(toks[4], Token::End));
+
         // test that the lexer catches invalid tokens
         assert!(matches!(lex("^^^"), Err(_)));
     }
-
 }

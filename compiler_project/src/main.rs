@@ -346,7 +346,7 @@ mod tests {
         assert!(matches!(toks[2], Token::Num(215)));
         assert!(matches!(toks[3], Token::Plus));
         assert!(matches!(toks[4], Token::End));
-
+        // keywords
         let toks = lex("func return int print read while if else break continue").unwrap();
         assert!(matches!(toks[0], Token::Func));
         assert!(matches!(toks[1], Token::Return));
@@ -359,7 +359,7 @@ mod tests {
         assert!(matches!(toks[8], Token::Break));
         assert!(matches!(toks[9], Token::Continue));
         assert!(matches!(toks[10], Token::End));
-
+        // ( ) { } [ ] , ;
         let toks = lex("( ) { } [ ] , ;").unwrap();
         assert!(matches!(toks[0], Token::LeftParen));
         assert!(matches!(toks[1], Token::RightParen));
@@ -370,7 +370,7 @@ mod tests {
         assert!(matches!(toks[6], Token::Comma));
         assert!(matches!(toks[7], Token::Semicolon));
         assert!(matches!(toks[8], Token::End));
-
+        // operators
         let toks = lex("+ - * / %").unwrap();
         assert!(matches!(toks[0], Token::Plus));
         assert!(matches!(toks[1], Token::Subtract));
@@ -378,7 +378,7 @@ mod tests {
         assert!(matches!(toks[3], Token::Divide));
         assert!(matches!(toks[4], Token::Modulus));
         assert!(matches!(toks[5], Token::End));
-
+        // comparison 
         let toks = lex("= < <= > >= == !=").unwrap();
         assert!(matches!(toks[0], Token::Assign));
         assert!(matches!(toks[1], Token::Less));

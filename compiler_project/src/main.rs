@@ -414,22 +414,43 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String>
 }
 
 fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    // int
     match tokens[*index] {
-    Token::Int => {*index += 1;}
-    _ => {return Err(String::from("Declaration statements must being with 'int' keyword"));}
+      Token::Int => {*index += 1;}
+      _ => {return Err(String::from("Declaration statements must being with 'int' keyword"));}
     }
 
+    // identifier
     match tokens[*index] {
-    Token::Ident(_) => {*index += 1;}
-    _ => {return Err(String::from("Declarations must have an identifier"));}
+      Token::Ident(_) => {*index += 1;}
+      _ => {return Err(String::from("Declarations must have an identifier"));}
     }
 
+    // ; or =
     match tokens[*index] {
-    Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statements must end with a semicolon"));}
+      Token::Semicolon => {
+        *index += 1; 
+        return Ok(());
+      }
+  
+      Token::Equality => {*index += 1;}
+      _ => {return Err(String::from("Expected ';' or '=' after identifier"));}
     }
 
-    return Ok(());
+    // number or identifier
+    match tokens[*index] {
+      Token::Num(_) | Token::Ident(_) => {*index += 1;}  
+      _ => {return Err(String::from("Expected number or identifier after '='"));}
+    }
+
+    // ;
+    match tokens[*index] {
+      Token::Semicolon => {
+        *index += 1;
+        Ok(())
+      }
+      _ => {return Err(String::from("Statement must end with a semicolon"));}
+    }
 }
 
 fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
@@ -471,18 +492,15 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
 
 fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     match tokens[*index] {
-    Token::Return => {*index += 1;}
-    _ => {return Err(String::from("Return statements must being with a return keyword"));}
+      Token::Return => {*index += 1;}
+      _ => {return Err(String::from("Return statements must begin with a 'return' keyword"));}
     }
 
-    match parse_expression(tokens, index) {
-    Ok(()) => {},
-    Err(e) => {return Err(e);}
-    }
+    parse_expression(tokens, index)?;
 
     match tokens[*index] {
-    Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+      Token::Semicolon => {*index += 1;}
+      _ => {return Err(String::from("Statement must end with a semicolon"));}
     }
 
     return Ok(());
@@ -510,16 +528,14 @@ fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
 fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     match tokens[*index] {
     Token::Read => {*index += 1;}
-    _ => {return Err(String::from("Return statements must being with a return keyword"));}
+    _ => {return Err(String::from("Read statements must begin with a 'read' keyword"));}
     }
 
-    match parse_expression(tokens, index) {
-    Ok(()) => {},
-    Err(e) => {return Err(e);}
-    }
+    parse_expression(tokens, index)?;
+
     match tokens[*index] {
-    Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+      Token::Semicolon => {*index += 1;}
+      _ => {return Err(String::from("Statement is missing the ';' semicolon"));}
     }
 
     return Ok(());
@@ -561,36 +577,15 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
 }
 
 fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-    match parse_term(tokens, index) {
-    Ok(()) => {},
-    Err(e) => {return Err(e);}
-    }
+    parse_term(tokens, index)?;
+
     loop {
        match tokens[*index] {
-       Token::Multiply => {
+        Token::Multiply | Token::Divide | Token::Modulus=> {
           *index += 1;
-          match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-          }
+          parse_term(tokens, index)?;
        }
 
-       Token::Divide => {
-          *index += 1;
-          match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-          }
-       }
-
-       Token::Modulus => {
-          *index += 1;
-          match parse_term(tokens, index) {
-          Ok(()) => {},
-          Err(e) => {return Err(e);}
-          }
-       }
-  
        _ => {
            break;
        }
@@ -643,8 +638,7 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
 // Rust will then run all the functions annotated with the "#[test]" keyword.
 #[cfg(test)]
 mod tests {
-    use crate::Token;
-    use crate::lex;
+    use crate::{Token, lex, parse_statement};
 
     #[test]
     fn lexer_test() {
@@ -718,8 +712,7 @@ mod tests {
         // test that the lexer catches invalid tokens
         assert!(matches!(lex("^^^"), Err(_)));
 
-        use crate::lex;
-      use crate::parse_statement;
+      }
 
       #[test]
       fn parse_test() {
@@ -737,5 +730,4 @@ mod tests {
           assert!(matches!(parse_statement(&tokens, &mut 0), Err(_)));
 
       }
-    }
 }

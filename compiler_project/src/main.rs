@@ -491,7 +491,7 @@ fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), 
 fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     match tokens[*index] {
     Token::Print=> {*index += 1;}
-    _ => {return Err(String::from("Return statements must being with a return keyword"));}
+    _ => {return Err(String::from("Print statements must begin with 'print' keyword"));}
     }
 
     match parse_expression(tokens, index) {
@@ -501,7 +501,7 @@ fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), S
 
     match tokens[*index] {
     Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+    _ => {return Err(String::from("Statements must end with a semicolon"));}
     }
 
     return Ok(());

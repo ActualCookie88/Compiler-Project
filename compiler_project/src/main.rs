@@ -459,6 +459,19 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
     _ => {return Err(String::from("Assignment statements must being with an identifier"));}
     }
 
+    // Check for array indexing: identifier[expression]
+    if matches!(tokens[*index], Token::LeftBracket) {
+        *index += 1;
+        match parse_expression(tokens, index) {
+        Ok(()) => {},
+        Err(e) => {return Err(e);}
+        }
+        match tokens[*index] {
+        Token::RightBracket => {*index += 1;}
+        _ => {return Err(String::from("Expected ']' after array index"));}
+        }
+    }
+
     match tokens[*index] {
     Token::Assign => {*index += 1;}
     _ => {return Err(String::from("Statement is missing the '=' operator"));}
@@ -471,7 +484,7 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
 
     match tokens[*index] {
     Token::Semicolon => {*index += 1;}
-    _ => {return Err(String::from("Statement is missing the '=' operator"));}
+    _ => {return Err(String::from("Statements must end with a semicolon"));}
     }
 
     return Ok(());

@@ -417,10 +417,52 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String>
     Token::Print => parse_print_statement(tokens, index),
     Token::Read => parse_read_statement(tokens, index),
     Token::If => parse_if_statement(tokens, index),
+    Token::While => parse_while_statement(tokens, index),
+    Token::Break => parse_break_statement(tokens, index),
     _ => Err(String::from("Invalid statement"))
     }
 }
 
+// break
+fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+  match tokens[*index] {
+        Token::Break => { *index += 1; }
+        _ => { return Err(String::from("Expected 'break'")); }
+    }
+
+    // ;
+    match tokens[*index] {
+        Token::Semicolon => { *index += 1; }
+        _ => { return Err(String::from("Break statement must end with a semicolon")); }
+    }
+
+    return Ok(());
+}
+
+// while loops
+fn parse_while_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match tokens[*index] {
+      Token::While => *index += 1,
+      _ => return Err("Expected 'while'".to_string()),
+    }
+    parse_expression(tokens, index)?;
+    
+    match tokens[*index] {
+      Token::LeftCurly => *index += 1,
+      _ => return Err("Expected '{' after while condition".to_string()),
+    }
+
+    while !matches!(tokens[*index], Token::RightCurly) {
+      parse_statement(tokens, index)?;
+    }
+
+    match tokens[*index] {
+      Token::RightCurly => *index += 1,
+       _ => return Err("Expected '}' to close while block".to_string()),
+    }
+
+    return Ok(());
+}
 // int a;   int a = 0;   int a = b;
 fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     // int
@@ -597,6 +639,22 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
        };
     }
 
+    match tokens[*index] {
+        Token::Less
+        | Token::LessEqual
+        | Token::Greater
+        | Token::GreaterEqual
+        | Token::Equality
+        | Token::NotEqual => {
+            *index += 1;
+            match parse_multiply_expression(tokens, index) {
+                Ok(()) => {}
+                Err(e) => { return Err(e); }
+            }
+        }
+        _ => {}
+    }
+
     return Ok(());
 }
 
@@ -679,19 +737,22 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
   }
 
   // (
-  match tokens[*index] {
-    Token::LeftParen => {*index += 1}
-    _ => {return Err(String::from("Expected '(' after 'if'"));},
-  }
+  // match tokens[*index] {
+  //   Token::LeftParen => {*index += 1}
+  //   _ => {return Err(String::from("Expected '(' after 'if'"));},
+  // }
 
   // expression within ()
   parse_expression(tokens, index)?;
+  if matches!(tokens[*index], Token::Comma) {
+    return Err(String::from("Error. Misplaced comma"));
+  }
 
   // )
-  match tokens[*index] {
-    Token::RightParen => {*index += 1}
-    _ => {return Err(String::from("Expected ')' after if condition"));}
-  }
+  // match tokens[*index] {
+  //   Token::RightParen => {*index += 1}
+  //   _ => {return Err(String::from("Expected ')' after if"));}
+  // }
 
   // {
   match tokens[*index] {

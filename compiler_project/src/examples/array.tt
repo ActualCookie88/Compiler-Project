@@ -12,5 +12,4 @@ func main() {
     # Should print out '8'
     array[2] = array[1] + 2 * 2;
     print(array[2]);
-
 }

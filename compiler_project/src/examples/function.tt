@@ -1,4 +1,4 @@
-func add(int a, int b) {
+func add(int [1] a, int b) {
     return a + b;
 }
 

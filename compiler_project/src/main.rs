@@ -430,6 +430,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String>
     Token::If => parse_if_statement(tokens, index),
     Token::While => parse_while_statement(tokens, index),
     Token::Break => parse_break_statement(tokens, index),
+    // Token::Ident(_) => parse_boolean_expression(tokens, index),
     _ => Err(String::from("Invalid statement"))
     }
 }
@@ -550,6 +551,22 @@ fn parse_declaration_statement_for_function(tokens: &Vec<Token>, index: &mut usi
     match tokens[*index] {
         Token::Int => { *index += 1; }
         _ => { return Err(String::from("Declaration statements must begin with 'int' keyword")); }
+    }
+
+    // [expression]
+    if matches!(tokens[*index], Token::LeftBracket) {
+      *index += 1;
+
+      match tokens[*index] {
+          Token::Num(_) => { *index += 1; }
+          _ => { return Err(String::from("Expected number within")); }
+      }
+
+      match tokens[*index] {
+          Token::RightBracket => { *index += 1; }
+          _ => { return Err(String::from("Expected ']' after array size")); }
+      }
+
     }
 
     // identifier
@@ -681,6 +698,15 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
        };
     }
 
+    return Ok(());
+}
+
+fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+    match parse_expression(tokens, index) {
+        Ok(()) => {}
+        Err(e) => { return Err(e); }
+    }
+
     match tokens[*index] {
         Token::Less
         | Token::LessEqual
@@ -689,16 +715,19 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String
         | Token::Equality
         | Token::NotEqual => {
             *index += 1;
-            match parse_multiply_expression(tokens, index) {
-                Ok(()) => {}
-                Err(e) => { return Err(e); }
-            }
+            // match parse_multiply_expression(tokens, index) {
+
+            
         }
-        _ => {}
+        _ => {return Err(String::from("Expected a comparison operator"));}
+    }
+    match parse_expression(tokens, index) {
+        Ok(()) => {}
+        Err(e) => { return Err(e); }
     }
 
     return Ok(());
-}
+    }
 
 fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     parse_term(tokens, index)?;
@@ -806,11 +835,11 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
   //   _ => {return Err(String::from("Expected '(' after 'if'"));},
   // }
 
-  // expression within ()
-  parse_expression(tokens, index)?;
-  if matches!(tokens[*index], Token::Comma) {
-    return Err(String::from("Error. Misplaced comma"));
-  }
+  // // expression within ()
+  parse_boolean_expression(tokens, index)?;
+  // if matches!(tokens[*index], Token::Comma) {
+  //   return Err(String::from("Error. Misplaced comma"));
+  // }
 
   // )
   // match tokens[*index] {

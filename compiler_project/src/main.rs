@@ -2,14 +2,13 @@
 // A Handwritten Compiler Using Rust.
 
 // cd into src/: cargo run -- examples/(.tt filename)
-
-// used to get the commandline arguments from the commandline.
-use std::env;
-// used to interact with the file system
-use std::fs;
+use std::env; // used to get the commandline arguments from the commandline.
+use std::fs; // used to interact with the file system
 
 use compiler_project::lexer::lex;
 use compiler_project::parser::parse_program;
+
+mod interpreter;
 
 fn main() {
     // get commandline arguments.
@@ -50,8 +49,13 @@ fn main() {
     // parser
     let mut index = 0;
     match parse_program(&tokens, &mut index) {
-        Ok(_) => println!("Successfully Parsed The Code."),
-        Err(e) => println!("Parser Error: {}", e),
+        Ok(generated_code) => {
+            println!("Successfully Parsed The Code."),
+            interpreter::execute_ir(&generated_code);
+        }
+        Err(e) => {
+            println!("Parser Error: {}", e);
+        }
     }
 }
 

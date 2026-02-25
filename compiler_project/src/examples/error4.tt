@@ -1,8 +1,5 @@
-# Error. Misplaced comma
 func main() {
-    if a, b {
-
-    } else {
-
-    }
+  # Error. Duplicate variables.
+  int a;
+  int a;
 }

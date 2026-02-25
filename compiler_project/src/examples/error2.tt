@@ -1,4 +1,4 @@
-# Error. Missing the left parenthesis '('
-func main ) {
+# error: main function has not been defined.
+func notmain() {
 
 }

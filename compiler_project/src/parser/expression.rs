@@ -1,4 +1,10 @@
 use crate::token::Token;
+
+struct Expression {
+  code: String,
+  name: String,
+}
+
 // parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
 pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     parse_multiply_expression(tokens, index)?;

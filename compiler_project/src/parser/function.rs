@@ -25,12 +25,12 @@ pub fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
 
     if !matches!(tokens[*index], Token::RightParen) {
         // first param
-        parse_declaration_statement_for_function(tokens, index)?;
+        parse_parameter(tokens, index)?;
 
         // more params
         while matches!(tokens[*index], Token::Comma) {
             *index += 1; 
-            parse_declaration_statement_for_function(tokens, index)?;
+            parse_parameter(tokens, index)?;
         }
     }
 
@@ -61,7 +61,7 @@ pub fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), Stri
     return Ok(());
 }
 
-pub fn parse_declaration_statement_for_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
     // int
     match tokens[*index] {
         Token::Int => { *index += 1; }

@@ -1,7 +1,12 @@
 // CS152 Compiler Design using the Rust Programming Language.
 // A Handwritten Compiler Using Rust.
 
-// cd into src/: cargo run -- examples/(.tt filename)
+/* HOW TO RUN EXAMPLES
+1. ./cs152.sh
+2. cd into compiler_project dir
+3. cd into src dir
+4. cargo run -- examples/(.tt filename)
+*/
 use std::env; // used to get the commandline arguments from the commandline.
 use std::fs; // used to interact with the file system
 
@@ -50,7 +55,7 @@ fn main() {
     let mut index = 0;
     match parse_program(&tokens, &mut index) {
         Ok(generated_code) => {
-            println!("Successfully Parsed The Code."),
+            println!("Successfully Parsed The Code.");
             interpreter::execute_ir(&generated_code);
         }
         Err(e) => {

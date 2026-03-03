@@ -1,13 +1,10 @@
 
-
-func add(int a) {
-
-}
-
-func sub(int a, int b) {
-
-}
-
 func main() {
-
+    int a;
+    int [4] array;
+    int variable;
+    
+    #a = 3;
+    #array[3] = 5;
+    #variable = array[5];
 }

@@ -6,7 +6,7 @@ struct Expression {
 }
 
 // parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
-pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     parse_multiply_expression(tokens, index)?;
     loop {
        match tokens[*index] {
@@ -28,7 +28,7 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), St
        };
     }
 
-    return Ok(());
+    return Ok(String::new());
 }
 
 pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {

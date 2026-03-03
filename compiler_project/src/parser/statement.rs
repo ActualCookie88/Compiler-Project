@@ -1,6 +1,6 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
-use crate::parser::expression::{parse_expression, parse_boolean_expression};
+use crate::parser::expression::{parse_expression, parse_boolean_expression, create_temp};
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -23,7 +23,7 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String,
                 match tokens[*index] {
                     Token::Semicolon => {
                         *index += 1;
-                        Ok(expr)
+                        Ok(expr.code)
                     }
                     _ => Err(String::from("Function call statement must end with ';'")),
                 }
@@ -161,14 +161,15 @@ fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
         _ => return Err(String::from("Print statements must begin with 'print' keyword")),
     }
 
-    parse_expression(tokens, index)?;
+    let expr = parse_expression(tokens, index)?;
 
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Statements must end with a semicolon")),
     }
 
-    return Ok(String::new())
+    let ir_code = format!("{}%out {}\n", expr.code, expr.name);
+    return Ok(ir_code)
 }
 
 fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
@@ -192,16 +193,16 @@ fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String
 /// 3. dest = array[i]    = %mov dest, [array + i]
 fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     // identifier
-    let dest = match &tokens[*index] {
-        Token::Ident(ident) => {
+    let ident = match &tokens[*index] {
+        Token::Ident(identifier) => {
             *index += 1;
-            ident.clone()
+            identifier.clone()
         }
         _ => return Err(String::from("Assignment statements must begin with an identifier")),
     };
 
     // Check for array indexing on lhs: [expression]
-    let lhs_index = if matches!(tokens[*index], Token::LeftBracket) {
+    let lhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;
         let index_expr = parse_expression(tokens, index)?;
         match tokens[*index] {
@@ -223,7 +224,7 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
     let rhs_expr = parse_expression(tokens, index)?;
 
     // Check for array indexing on rhs: [expression]
-    let rhs_index = if matches!(tokens[*index], Token::LeftBracket) {
+    let rhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;
         let index_expr = parse_expression(tokens, index)?;
         match tokens[*index] {
@@ -241,11 +242,36 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
         _ => return Err(String::from("Missing semicolon.")),
     }
 
+    let mut ir_code = String::new();
+
     // generate code 
-    let ir_code = match (lhs_index, rhs_index) { 
-        (Some(l_index), None) => format!("%mov [{} + {}], {}\n", dest, l_index, rhs_expr), // array write
-        (None, Some(r_index)) => format!("%mov {}, [{} + {}]\n", dest, rhs_expr, r_index), // array read
-        (None, None) => format!("%mov {}, {}\n", dest, rhs_expr),                          // simple assignment
+    match (lhs_index_expr, rhs_index_expr) { 
+        // array write: array[index] = rhs
+        (Some(lhs_expr), None) => {
+            ir_code.push_str(&lhs_expr.code);
+            ir_code.push_str(&rhs_expr.code);
+
+            let lhs_temp = create_temp();
+            ir_code.push_str(&format!("%int {}\n", lhs_temp));
+            ir_code.push_str(&format!("%mov {}, {}\n", lhs_temp, lhs_expr.name));
+
+            ir_code.push_str(&format!("%mov [{} + {}], {}\n", ident, lhs_temp, rhs_expr.name));
+        }
+        // array read: lhs = rhs[index]
+        (None, Some(rhs_index)) => {
+            ir_code.push_str(&rhs_expr.code);
+            ir_code.push_str(&rhs_index.code);
+
+            let rhs_temp = create_temp();
+            ir_code.push_str(&format!("%int {}\n", rhs_temp));
+            ir_code.push_str(&format!("%mov {}, {}\n", rhs_temp, rhs_index.name));
+
+            ir_code.push_str(&format!("%mov {}, [{} + {}]\n", ident, rhs_expr.name, rhs_temp));
+        }
+        (None, None) => {
+            ir_code.push_str(&rhs_expr.code);
+            ir_code.push_str(&format!("%mov {}, {}\n", ident, rhs_expr.name));                      // simple assignment
+        }
         (Some(_), Some(_)) => return Err(String::from("Assignments with array indexing on both sides are not supported")),
     };
 

@@ -9,6 +9,7 @@ pub fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Re
     }
 
     let mut array_size: Option<i32> = None;
+    
     // [number]
     if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;

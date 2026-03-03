@@ -1,10 +1,37 @@
-
 func main() {
+    # variable declarations
     int a;
+    int b;
+    int c;
     int [4] array;
     int variable;
-    
-    #a = 3;
-    #array[3] = 5;
-    #variable = array[5];
+
+    # basic arithmetic
+    a = 3;
+    b = 5;
+    c = a + b - 2;
+
+    # multiplication, division, modulus
+    a = 4 * 2 / 3 % 2;
+
+    # parentheses and nested expressions
+    b = (1 + 2) * 3;
+
+    # identifiers and function calls
+    variable = foo(5, 6) + x * y;
+
+    # array indexing
+    array[3] = 5;
+    variable = array[2] + 10;
+
+    # boolean expressions
+    if (a < b) {
+        variable = 1;
+    } else {
+        variable = 0;
+    }
+
+    if (c == (a + b)) {
+        array[0] = c;
+    }
 }

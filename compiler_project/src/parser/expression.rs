@@ -1,14 +1,5 @@
 use crate::token::Token;
 
-static mut VAR_NUM: i64 = 0;
-
-fn create_temp() -> String {
-    unsafe {
-        VAR_NUM += 1;
-        format!("_temp{}", VAR_NUM)
-    }
-};
-
 struct Expression {
   code: String,
   name: String,

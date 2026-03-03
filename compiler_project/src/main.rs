@@ -3,9 +3,9 @@
 
 /* HOW TO RUN EXAMPLES
 1. ./cs152.sh
-2. cd into compiler_project dir
-3. cd into src dir
+2. cd compiler_project/src/
 4. cargo run -- examples/(.tt filename)
+
 */
 use std::env; // used to get the commandline arguments from the commandline.
 use std::fs; // used to interact with the file system
@@ -57,6 +57,7 @@ fn main() {
         Ok(generated_code) => {
             println!("Successfully Parsed The Code.");
             interpreter::execute_ir(&generated_code);
+            println!("{}", generated_code);
         }
         Err(e) => {
             println!("Parser Error: {}", e);

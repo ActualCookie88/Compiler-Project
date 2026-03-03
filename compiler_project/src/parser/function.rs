@@ -1,94 +1,107 @@
 use crate::token::Token;
 use crate::parser::statement::*;
-// parse function such as:
+
 // func main(int a, int b) {
 //    # ... statements here...
-//    # ...
 // }
 // a loop is done to handle statements.
-pub fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
-    
+pub fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+    let mut func_code = String::new();
+    let mut params: Vec<String> = Vec::new();
+
+    // func 
     match tokens[*index] {
-    Token::Func => { *index += 1; }
-    _ => { return Err(String::from("Missing the 'func' keyword.")); }
+        Token::Func => *index += 1, 
+        _ => return Err(String::from("Missing the 'func' keyword.")),
     }
 
+    // function name
+    let func_name = match &tokens[*index] {
+        Token::Ident(ident) => {
+            *index += 1;
+            ident.clone()
+        }
+        _  => return Err(String::from("Functions must have a function identifier")),
+    };
+
+    // (
     match tokens[*index] {
-    Token::Ident(_) => { *index += 1; }
-    _  => { return Err(String::from("Functions must have a function identifier"));}
+        Token::LeftParen => *index += 1,
+        _ => return Err(String::from("Missing the left parenthesis '('")),
     }
 
-    match tokens[*index] {
-    Token::LeftParen => { *index += 1; }
-    _ => { return Err(String::from("Missing the left parenthesis '('"));}
-    }
-
+    // parameters: int a, int b, ...
     if !matches!(tokens[*index], Token::RightParen) {
         // first param
-        parse_parameter(tokens, index)?;
+        let param_code = parse_parameter(tokens, index)?;
+        params.push(param_code);
 
         // more params
         while matches!(tokens[*index], Token::Comma) {
             *index += 1; 
-            parse_parameter(tokens, index)?;
+            let param_code2 = parse_parameter(tokens, index)?;
+            params.push(param_code2);
         }
     }
 
+    // )
     match tokens[*index] {
-    Token::RightParen => { *index += 1; }
-    _ => { return Err(String::from("Missing the right parenthesis ')'"));}
+        Token::RightParen => *index += 1, 
+        _ => return Err(String::from("Missing the right parenthesis ')'")),
     }
 
+    // generate IR
+    func_code += &format!("%func {}({})\n", func_name, params.join(", "));
+
+    // {
     match tokens[*index] {
-    Token::LeftCurly => { *index += 1; }
-    _ => { return Err(String::from("Missing the left curly bracket '{'"));}
+        Token::LeftCurly => *index += 1,
+        _ => return Err(String::from("Missing the left curly bracket '{'")),
     }
 
+    // statements inside function
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
-        parse_statement(tokens, index)?;
+        let statement_code = parse_statement(tokens, index)?;
+        func_code += &statement_code;
 
         if *index == before {
             return Err("Parser made no progress".to_string());
         }
     }
 
+    // }
     match tokens[*index] {
-    Token::RightCurly => { *index += 1; }
-    _ => { return Err(String::from("Expected '}'"));}
+        Token::RightCurly => *index += 1, 
+        _ => return Err(String::from("Expected '}'")),
     }
 
-    return Ok(());
+    func_code += "%endfunc\n";
+
+    return Ok(func_code);
 }
 
-pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+// parameters: int a, int b, ...
+pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     // int
-    match tokens[*index] {
-        Token::Int => { *index += 1; }
-        _ => { return Err(String::from("Declaration statements must begin with 'int' keyword")); }
-    }
-
-    // [expression]
-    if matches!(tokens[*index], Token::LeftBracket) {
-      *index += 1;
-
-      match tokens[*index] {
-          Token::Num(_) => { *index += 1; }
-          _ => { return Err(String::from("Expected number within")); }
-      }
-
-      match tokens[*index] {
-          Token::RightBracket => { *index += 1; }
-          _ => { return Err(String::from("Expected ']' after array size")); }
-      }
-
-    }
+    let param_type = match tokens[*index] {
+        Token::Int => {
+            *index += 1; 
+            "int"
+        }
+        _ => return Err(String::from("Parameter must begin with 'int' keyword")),
+    };
 
     // identifier
-    match tokens[*index] {
-        Token::Ident(_) => { *index += 1; }
-        _ => { return Err(String::from("Declarations must have an identifier")); }
-    }
+    let param_name = match &tokens[*index] {
+        Token::Ident(ident) => {
+            *index += 1; 
+            ident.clone()
+        }
+        _ => return Err(String::from("Declarations must have an identifier")),
+    };
 
-    return Ok(());
+    let param_code = format!("%{} {}", param_type, param_name);
+
+    return Ok(param_code);
 }

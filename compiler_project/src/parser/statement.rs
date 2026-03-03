@@ -158,14 +158,14 @@ fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Stri
         _ => return Err(String::from("Return statements must begin with a 'return' keyword")),
     }
 
-    parse_expression(tokens, index)?;
+    let expr = parse_expression(tokens, index)?;
 
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Statement must end with a semicolon")),
     }
 
-    return Ok(String::new())
+    return Ok(format!("{}%ret {}\n", expr.code, expr.name))
 }
 
 fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
@@ -191,14 +191,20 @@ fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String
         _ => return Err(String::from("Read statements must begin with a 'read' keyword")),
     }
 
-    parse_expression(tokens, index)?;
+    let name = match &tokens[*index] {
+        Token::Ident(ident) => {
+            *index += 1;
+            ident.clone()
+        }
+        _ => return Err(String::from("Read expects an identifier")),
+    };
 
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Statement is missing the ';' semicolon")),
     }
 
-    return Ok(String::new())
+    Ok(format!("%input {}\n", name))
 }
 
 /// 1. dest = src1        = %mov dest, src1

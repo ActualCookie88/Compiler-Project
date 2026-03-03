@@ -1,7 +1,13 @@
 use crate::token::Token;
+use crate::parser::program::{SymbolTable, Var, add_function, add_param, add_local};
 
 // int a;   int [8] a;
-pub fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+pub fn parse_declaration_statement(
+    tokens: &Vec<Token>,
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str
+    ) -> Result<String, String> {
     // int
     match tokens[*index] {
         Token::Int => {*index += 1;}
@@ -39,17 +45,31 @@ pub fn parse_declaration_statement(tokens: &Vec<Token>, index: &mut usize) -> Re
         _ => return Err(String::from("Declarations must have an identifier")),
     };
 
-    // ;
-    match tokens[*index] {
-        Token::Semicolon => *index += 1,
-        _ => return Err(String::from("Expected ';' at end of declaration")),
+    // check if declaration is array or scalar, and add to symbol table accordingly
+    match array_size {
+        Some(size) => {
+            if size <= 0 { // array size semantic check
+                return Err(String::from("Array size must be greater than 0"));
+            }
+
+            add_local(table, current_func, Var {
+                name: var_name.clone(),
+                is_array: true,
+                size,
+            })?;
+
+            Ok(format!("%int[] {}, {}\n", var_name, size))
+        }
+
+        //scalar
+        None => {
+            add_local(table, current_func, Var {
+                name: var_name.clone(),
+                is_array: false,
+                size: 0,
+            })?;
+
+            Ok(format!("%int {}\n", var_name))
+        }
     }
-
-    // generate code
-    let ir_code = match array_size {
-        Some(size) => format!("%int[] {}, {}\n", var_name, size),
-        None => format!("%int {}\n", var_name),
-    };
-
-    Ok(ir_code)
 }

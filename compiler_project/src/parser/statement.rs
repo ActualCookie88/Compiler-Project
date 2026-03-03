@@ -1,6 +1,7 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression, create_temp};
+use crate::parser::program::{SymbolTable, Var, add_local};
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -8,18 +9,22 @@ use crate::parser::expression::{parse_expression, parse_boolean_expression, crea
 // print(a)
 // read(a)
 // returns epsilon if '}'
-pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+pub fn parse_statement(
+        tokens: &Vec<Token>, 
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str ) -> Result<String, String> {
     match &tokens[*index] {
-        Token::Int => parse_declaration_statement(tokens, index),
-        Token::Return => parse_return_statement(tokens, index),
-        Token::Print => parse_print_statement(tokens, index),
-        Token::Read => parse_read_statement(tokens, index),
-        Token::If => parse_if_statement(tokens, index),
-        Token::While => parse_while_statement(tokens, index),
+        Token::Int => parse_declaration_statement(tokens, index, table, current_func),
+        Token::Return => parse_return_statement(tokens, index, table, current_func),
+        Token::Print => parse_print_statement(tokens, index, table, current_func),
+        Token::Read => parse_read_statement(tokens, index, table, current_func),
+        Token::If => parse_if_statement(tokens, index, table, current_func),
+        Token::While => parse_while_statement(tokens, index, table, current_func),
         Token::Break => parse_break_statement(tokens, index),
         Token::Ident(_) => {
             if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
-                let expr = parse_expression(tokens, index)?;
+                let expr = parse_expression(tokens, index, table, current_func)?;
                 match tokens[*index] {
                     Token::Semicolon => {
                         *index += 1;
@@ -28,7 +33,7 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String,
                     _ => Err(String::from("Function call statement must end with ';'")),
                 }
             } else { // assignment
-                parse_assignment_statement(tokens, index)
+                parse_assignment_statement(tokens, index, table, current_func)
             }
         },
         _ => Err(String::from("Invalid statement"))
@@ -52,7 +57,12 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
 }
 
 // while loops
-fn parse_while_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_while_statement(
+        tokens: &Vec<Token>,
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str
+    ) -> Result<String, String>{
     match tokens[*index] {
         Token::While => *index += 1,
         _ => return Err("Expected 'while'".to_string()),
@@ -66,7 +76,7 @@ fn parse_while_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
 
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
-        parse_statement(tokens, index)?;
+        parse_statement(tokens, index, table, current_func)?;
 
         if *index == before {
             return Err("Parser made no progress".to_string());
@@ -81,7 +91,12 @@ fn parse_while_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
     return Ok(String::new())
 }
 
-fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_if_statement(
+        tokens: &Vec<Token>,
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str
+    ) -> Result<String, String>{
 	// if
 	match tokens[*index] {
 	    Token::If => *index += 1,
@@ -111,7 +126,7 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, 
 	// parse body until }
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
-		parse_statement(tokens, index)?;
+		parse_statement(tokens, index, table, current_func)?;
 
 		if *index == before {
 			return Err("Parser made no progress".to_string());
@@ -135,7 +150,7 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, 
 		// parse body until }
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
-			parse_statement(tokens, index)?;
+			parse_statement(tokens, index, table, current_func)?;
 
 			if *index == before {
 				return Err("Parser made no progress".to_string());
@@ -152,13 +167,18 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, 
 	return Ok(String::new())
 }
 
-fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_return_statement(
+        tokens: &Vec<Token>,
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str
+    ) -> Result<String, String> {
     match tokens[*index] {
         Token::Return => *index += 1,
         _ => return Err(String::from("Return statements must begin with a 'return' keyword")),
     }
 
-    let expr = parse_expression(tokens, index)?;
+    let expr = parse_expression(tokens, index, table, current_func)?;
 
     match tokens[*index] {
         Token::Semicolon => *index += 1,
@@ -168,13 +188,18 @@ fn parse_return_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Stri
     return Ok(format!("{}%ret {}\n", expr.code, expr.name))
 }
 
-fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_print_statement(
+        tokens: &Vec<Token>,
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str
+    ) -> Result<String, String> {
     match tokens[*index] {
         Token::Print=> *index += 1,
         _ => return Err(String::from("Print statements must begin with 'print' keyword")),
     }
 
-    let expr = parse_expression(tokens, index)?;
+    let expr = parse_expression(tokens, index, table, current_func)?;
 
     match tokens[*index] {
         Token::Semicolon => *index += 1,
@@ -185,7 +210,12 @@ fn parse_print_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
     return Ok(ir_code)
 }
 
-fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_read_statement(
+        tokens: &Vec<Token>,
+        index: &mut usize,
+        table: &mut SymbolTable,
+        current_func: &str
+    ) -> Result<String, String>{
     match tokens[*index] {
         Token::Read => *index += 1,
         _ => return Err(String::from("Read statements must begin with a 'read' keyword")),
@@ -210,7 +240,12 @@ fn parse_read_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String
 /// 1. dest = src1        = %mov dest, src1
 /// 2. array[i] = src1    = %mov [array + i], src1
 /// 3. dest = array[i]    = %mov dest, [array + i]
-fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_assignment_statement(
+    tokens: &Vec<Token>,
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str
+) -> Result<String, String> {
     // identifier
     let ident = match &tokens[*index] {
         Token::Ident(identifier) => {
@@ -223,7 +258,7 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
     // Check for array indexing on lhs: [expression]
     let lhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;
-        let index_expr = parse_expression(tokens, index)?;
+        let index_expr = parse_expression(tokens, index, table, current_func)?;
         match tokens[*index] {
             Token::RightBracket => *index += 1,
             _ => return Err(String::from("Expected ']' after array index")),
@@ -240,12 +275,12 @@ fn parse_assignment_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<
     }
 
     // right hand side of expression
-    let rhs_expr = parse_expression(tokens, index)?;
+    let rhs_expr = parse_expression(tokens, index, table, current_func)?;
 
     // Check for array indexing on rhs: [expression]
     let rhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;
-        let index_expr = parse_expression(tokens, index)?;
+        let index_expr = parse_expression(tokens, index, table, current_func)?;
         match tokens[*index] {
             Token::RightBracket => *index += 1,
             _ => return Err(String::from("Expected ']' after array index")),

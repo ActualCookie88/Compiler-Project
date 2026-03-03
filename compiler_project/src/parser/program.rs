@@ -24,12 +24,3 @@ fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
     _ => { false }
     }
 }
-
-static mut VAR_NUM: i64 = 0;
-
-fn create_temp() -> String {
-    unsafe {
-        VAR_NUM += 1;
-        format!("_temp{}", VAR_NUM)
-    }
-}

@@ -124,7 +124,7 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
             let var_name = ident.clone();
             
             // check if function
-            if let Some(func) = find_function(table, &var_name) {
+            if let Some(_) = find_function(table, &var_name) {
                 if !matches!(tokens[*index], Token::LeftParen) {
                     return Err(format!("Function '{}' must be called with parentheses", var_name));
                 }

@@ -1,16 +1,12 @@
 use crate::token::Token;
 use crate::parser::statement::*;
-use crate::parser::program::{SymbolTable, Var, add_function, add_param};
+use crate::parser::program::SymbolTable;
 
 // func main(int a, int b) {
 //    # ... statements here...
 // }
 // a loop is done to handle statements.
-pub fn parse_function(
-        tokens: &Vec<Token>, 
-        index: &mut usize,
-        table: &mut SymbolTable) -> Result<String, String> {
-    
+pub fn parse_function(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable) -> Result<String, String> {
     let mut func_code = String::new();
     let mut params: Vec<String> = Vec::new();
 
@@ -29,7 +25,10 @@ pub fn parse_function(
         _  => return Err(String::from("Functions must have a function identifier")),
     };
 
-    add_function(table, func_name.clone())?; // so if we func add(int a) we know if it eists
+    let current_func = func_name.clone();
+
+    crate::parser::program::add_function(table, current_func.clone())?;
+
     // (
     match tokens[*index] {
         Token::LeftParen => *index += 1,
@@ -39,13 +38,13 @@ pub fn parse_function(
     // parameters: int a, int b, ...
     if !matches!(tokens[*index], Token::RightParen) {
         // first param
-        let param_code = parse_parameter(tokens, index, table, &func_name)?;
+        let param_code = parse_parameter(tokens, index)?;
         params.push(param_code);
 
         // more params
         while matches!(tokens[*index], Token::Comma) {
             *index += 1; 
-            let param_code2 = parse_parameter(tokens, index, table, &func_name)?;
+            let param_code2 = parse_parameter(tokens, index)?;
             params.push(param_code2);
         }
     }
@@ -56,9 +55,6 @@ pub fn parse_function(
         _ => return Err(String::from("Missing the right parenthesis ')'")),
     }
 
-    if func_name == "main" && !params.is_empty() {
-        return Err(String::from("main function cannot have parameters"));
-    }
     // generate IR
     func_code += &format!("%func {}({})\n", func_name, params.join(", "));
 
@@ -71,7 +67,7 @@ pub fn parse_function(
     // statements inside function
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
-        let statement_code = parse_statement(tokens, index, table, &func_name)?;
+        let statement_code = parse_statement(tokens, index, table, &current_func)?;
         func_code += &statement_code;
 
         if *index == before {
@@ -91,12 +87,7 @@ pub fn parse_function(
 }
 
 // parameters: int a, int b, ...
-pub fn parse_parameter(
-        tokens: &Vec<Token>, 
-        index: &mut usize,
-        table: &mut SymbolTable,
-        func_name: &str
-        ) -> Result<String, String> {
+pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     // int
     let param_type = match tokens[*index] {
         Token::Int => {
@@ -115,12 +106,7 @@ pub fn parse_parameter(
         _ => return Err(String::from("Declarations must have an identifier")),
     };
 
-    let var = Var {
-        name: param_name.clone(),
-        is_array: false,
-        size: 0,
-    };
-    add_param(table, func_name, var)?;
+    let param_code = format!("%{} {}", param_type, param_name);
 
-    return Ok(format!("%int {}", param_name));
+    return Ok(param_code);
 }

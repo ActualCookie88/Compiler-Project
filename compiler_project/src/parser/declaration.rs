@@ -1,5 +1,5 @@
 use crate::token::Token;
-use crate::parser::program::{SymbolTable, Var, add_function, add_param, add_local};
+use crate::parser::program::{SymbolTable, Var, add_local};
 
 // int a;   int [8] a;
 pub fn parse_declaration_statement(

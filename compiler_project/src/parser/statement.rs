@@ -1,7 +1,7 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression, create_temp};
-use crate::parser::program::{SymbolTable, Var, add_local};
+use crate::parser::program::{SymbolTable};
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -18,7 +18,7 @@ pub fn parse_statement(
         Token::Int => parse_declaration_statement(tokens, index, table, current_func),
         Token::Return => parse_return_statement(tokens, index, table, current_func),
         Token::Print => parse_print_statement(tokens, index, table, current_func),
-        Token::Read => parse_read_statement(tokens, index, table, current_func),
+        Token::Read => parse_read_statement(tokens, index),
         Token::If => parse_if_statement(tokens, index, table, current_func),
         Token::While => parse_while_statement(tokens, index, table, current_func),
         Token::Break => parse_break_statement(tokens, index),
@@ -213,8 +213,6 @@ fn parse_print_statement(
 fn parse_read_statement(
         tokens: &Vec<Token>,
         index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str
     ) -> Result<String, String>{
     match tokens[*index] {
         Token::Read => *index += 1,

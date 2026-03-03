@@ -1,8 +1,14 @@
+func foo(int i, int j) {
+    return i + j;
+}
+
 func main() {
     # variable declarations
     int a;
     int b;
     int c;
+    int x;
+    int y;
     int [4] array;
     int variable;
 
@@ -18,11 +24,8 @@ func main() {
     b = (1 + 2) * 3;
 
     # identifiers and function calls
-    variable = foo(5, 6) + x * y;
-
-    # array indexing
-    array[3] = 5;
-    variable = array[2] + 10;
+    # variable = foo(5, 6);
+    variable = x * y;
 
     # boolean expressions
     if (a < b) {
@@ -34,4 +37,6 @@ func main() {
     if (c == (a + b)) {
         array[0] = c;
     }
+
+    print(a+b);
 }

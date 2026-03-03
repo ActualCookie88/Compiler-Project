@@ -88,8 +88,21 @@ fn parse_if_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, 
 	    _ => return Err(String::from("Expected 'if' keyword")),
 	}
 
+    // (
+    match tokens[*index] {
+        Token::LeftParen => *index += 1,
+        _ => return Err(String::from("Expected '(' after if")),
+    }
+
 	parse_boolean_expression(tokens, index)?;
 
+    // )
+    match tokens[*index] {
+        Token::RightParen => *index += 1,
+        _ => return Err(String::from("Missing the right parenthesis ')'")),
+    }
+
+    // {
 	match tokens[*index] {
         Token::LeftCurly =>  *index += 1,
         _ => return Err(String::from("Expected '{'")),

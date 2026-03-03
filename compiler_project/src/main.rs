@@ -50,9 +50,9 @@ fn main() {
             return;
         }
     };
-    for t in &tokens {
-        println!("{:?}", t);
-    }
+    // for t in &tokens {
+    //     println!("{:?}", t);
+    // }
 
     // parser
     let mut index = 0;

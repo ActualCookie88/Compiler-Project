@@ -1,4 +1,5 @@
 use crate::token::Token;
+use crate::parser::program::{ find_function, find_variable, SymbolTable};
 
 pub struct Expression {
   pub code: String,
@@ -15,8 +16,8 @@ pub fn create_temp() -> String {
 }
 
 // parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
-pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Expression, String> {
-    let mut expr = parse_multiply_expression(tokens, index)?;
+pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+    let mut expr = parse_multiply_expression(tokens, index, table, current_func)?;
     loop {
         let operation = match tokens[*index] {
             Token::Plus => "add",
@@ -25,7 +26,7 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Expres
        };
        *index += 1;
 
-        let expr2 = parse_multiply_expression(tokens, index)?;
+        let expr2 = parse_multiply_expression(tokens, index, table, current_func)?;
         let dest = create_temp();
 
         // Combine IR
@@ -46,8 +47,8 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Expres
     Ok(expr)
 }
 
-pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Expression, String> {
-    let expr = parse_expression(tokens, index)?;
+pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+    let expr = parse_expression(tokens, index, table, current_func)?;
 
     let operation = match tokens[*index] {
         Token::Less => "lt",
@@ -60,7 +61,7 @@ pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize) -> Resul
     };
     *index += 1;
 
-    let expr2 = parse_expression(tokens, index)?;
+    let expr2 = parse_expression(tokens, index, table, current_func)?;
     let dest = create_temp();
 
     // Combine IR
@@ -80,8 +81,8 @@ pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize) -> Resul
     })
 }
 
-pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Expression, String> {
-    let mut expr = parse_term(tokens, index)?;
+pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+    let mut expr = parse_term(tokens, index, table, current_func)?;
 
     loop {
        let operation = match tokens[*index] {
@@ -92,7 +93,7 @@ pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Resu
         };
         *index += 1;
 
-        let expr2 = parse_term(tokens, index)?;
+        let expr2 = parse_term(tokens, index, table, current_func)?;
         let dest = create_temp();
 
         // Combine IR
@@ -114,34 +115,26 @@ pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize) -> Resu
 }
 
 // a term is either a Number or an Identifier.
-fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Expression, String> {
+fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
     match &tokens[*index] {
         Token::Ident(ident) => {
             *index += 1;
 
             let mut code = String::new();
             let var_name = ident.clone();
-
-            // array indexing
-            if matches!(tokens[*index], Token::LeftBracket) {
-                *index += 1;
-
-                let index_expr = parse_expression(tokens, index)?;
-                code = format!("{}{}", code, index_expr.code);
-
-                match tokens[*index] {
-                    Token::RightBracket => *index += 1,
-                    _ => return Err(String::from("Expected ']' after array size")),
-                }
-            }
             
-            // function call
-            if matches!(tokens[*index], Token::LeftParen) {
+            // check if function
+            if let Some(func) = find_function(table, &var_name) {
+                if !matches!(tokens[*index], Token::LeftParen) {
+                    return Err(format!("Function '{}' must be called with parentheses", var_name));
+                }
                 *index += 1;
+                let mut args: Vec<String> = Vec::new();
 
                 while !matches!(tokens[*index], Token::RightParen) {
-                    let arg_expr = parse_expression(tokens, index)?;
+                    let arg_expr = parse_expression(tokens, index, table, current_func)?;
                     code = format!("{}{}", code, arg_expr.code);
+                    args.push(arg_expr.name);
 
                     if matches!(tokens[*index], Token::Comma) {
                         *index += 1;
@@ -154,34 +147,91 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Expression, Stri
                     Token::RightParen => { *index += 1; }
                     _ => { return Err(String::from("Expected ')' after function call")); }
                 }
+
+                let dest = create_temp();
+                
+                return Ok(Expression {
+                    code: format!(
+                        "{}%int {}\n%call {}, {}({})\n",
+                        code,
+                        dest,
+                        dest,
+                        var_name,
+                        args.join(",")
+                    ),
+                    name: dest,
+                });
             }
 
-            Ok(Expression { 
-                code, 
-                name: var_name 
-            })
-        }
+            // Otherwise is variable
+            let mut is_array = false;
+            for func in &table.functions {
+                if let Some(var) = find_variable(func, &var_name) {
+                    is_array = var.is_array;
+                    break;
+                }
+            }
 
-        Token::Num(num) => {
-            *index += 1;
+            // array indexing
+            if matches!(tokens[*index], Token::LeftBracket) {
+                if !is_array {
+                    return Err(format!("Variable '{}' is not an array", var_name));
+                }
+                *index += 1;
+
+                let index_expr = parse_expression(tokens, index, table, current_func)?;
+                let dest = create_temp();
+
+                match tokens[*index] {
+                    Token::RightBracket => *index += 1,
+                    _ => return Err(String::from("Expected ']' after array size")),
+                }
+                return Ok(Expression {
+                    code: format!(
+                        "{}%int {}\n%mov {}, [{} + {}]\n",
+                        index_expr.code,
+                        dest,
+                        dest,
+                        var_name,
+                        index_expr.name
+                    ),
+                    name: dest,
+                });
+            }
+
             Ok(Expression {
                 code: String::new(),
-                name: num.to_string() 
+                name: var_name,
             })
         }
 
+        // number
+        Token::Num(num) => {
+            *index += 1;
+            let dest = create_temp();
+
+            Ok(Expression {
+                code: format!(
+                    "%int {}\n%mov {}, {}\n",
+                    dest, dest, num
+                ),
+                name: dest,
+            })
+        }
+
+        // (expression)
         Token::LeftParen => {
             *index += 1;
-            let expr = parse_expression(tokens, index)?;
+            let expr = parse_expression(tokens, index, table, current_func)?;
 
             match tokens[*index] {
                 Token::RightParen => *index += 1,
                 _ => return Err(String::from("Missing the right parenthesis ')'")),
             }
-            return Ok(expr);
+            Ok(expr)
         }
         
-        _ => return Err(String::from("Invalid Expression.")),
+        _ => Err(String::from("Invalid Expression.")),
 
     }
 }

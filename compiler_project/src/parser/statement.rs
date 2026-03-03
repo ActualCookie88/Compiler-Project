@@ -67,7 +67,7 @@ fn parse_while_statement(
         Token::While => *index += 1,
         _ => return Err("Expected 'while'".to_string()),
     }
-    parse_boolean_expression(tokens, index)?;
+    parse_boolean_expression(tokens, index, table, current_func)?;
     
     match tokens[*index] {
         Token::LeftCurly => *index += 1,
@@ -109,7 +109,7 @@ fn parse_if_statement(
         _ => return Err(String::from("Expected '(' after if")),
     }
 
-	parse_boolean_expression(tokens, index)?;
+	parse_boolean_expression(tokens, index, table, current_func)?;
 
     // )
     match tokens[*index] {

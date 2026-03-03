@@ -58,6 +58,11 @@ pub fn parse_declaration_statement(
                 size,
             })?;
 
+            match tokens[*index] {
+                Token::Semicolon => *index += 1,
+                _ => return Err("Declaration must end with ';'".to_string()),
+            }
+
             Ok(format!("%int[] {}, {}\n", var_name, size))
         }
 
@@ -68,6 +73,11 @@ pub fn parse_declaration_statement(
                 is_array: false,
                 size: 0,
             })?;
+
+            match tokens[*index] {
+                Token::Semicolon => *index += 1,
+                _ => return Err("Declaration must end with ';'".to_string()),
+            }
 
             Ok(format!("%int {}\n", var_name))
         }

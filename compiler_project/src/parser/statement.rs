@@ -253,9 +253,6 @@ fn parse_assignment_statement(
         _ => return Err(String::from("Assignment statements must begin with an identifier")),
     };
 
-    // right hand side of expression
-    let rhs_expr = parse_expression(tokens, index, table, current_func)?;
-
     // func must be declared
     let func = find_function(table, current_func)
         .ok_or_else(|| format!("Function '{}' not found", current_func))?
@@ -299,7 +296,8 @@ fn parse_assignment_statement(
         _ => return Err(String::from("Missing the '=' operator")),
     }
 
-    
+    // right hand side of expression
+    let rhs_expr = parse_expression(tokens, index, table, current_func)?;
 
     // Check for array indexing on rhs: [expression]
     let rhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {

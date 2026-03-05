@@ -245,11 +245,6 @@ fn parse_assignment_statement(
     current_func: &str
 ) -> Result<String, String> {
     // identifier
-
-    // func must be declared
-    let func = find_function(table, current_func)
-        .ok_or_else(|| format!("Function '{}' not found", current_func))?;
-    
     let ident = match &tokens[*index] {
         Token::Ident(identifier) => {
             *index += 1;
@@ -258,8 +253,16 @@ fn parse_assignment_statement(
         _ => return Err(String::from("Assignment statements must begin with an identifier")),
     };
 
+    // right hand side of expression
+    let rhs_expr = parse_expression(tokens, index, table, current_func)?;
+
+    // func must be declared
+    let func = find_function(table, current_func)
+        .ok_or_else(|| format!("Function '{}' not found", current_func))?
+        .clone();
+
     // lhs must be declared
-    let lhs_var = find_variable(func, &ident)
+    let lhs_var = find_variable(&func, &ident)
         .ok_or_else(|| format!("Variable '{}' not declared in function '{}'", ident, current_func))?;
     
     // Check for array indexing on lhs: [expression]
@@ -296,15 +299,14 @@ fn parse_assignment_statement(
         _ => return Err(String::from("Missing the '=' operator")),
     }
 
-    // right hand side of expression
-    let rhs_expr = parse_expression(tokens, index, table, current_func)?;
+    
 
     // Check for array indexing on rhs: [expression]
     let rhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         // if "a = b[i];" rhs_expr.name should be the base variable name
-        let rhs_var = find_variable(func, &rhs_expr.name)
+        let rhs_var = find_variable(&func, &rhs_expr.name)
             .ok_or_else(|| format!("Variable '{}' used without being declared", rhs_expr.name))?;
-
+    
         // rhs base must be array
         if !rhs_var.is_array {
             return Err(format!(
@@ -323,7 +325,7 @@ fn parse_assignment_statement(
     } else {
         // if rhs expression is just a variable name and that variable is an array,
         // then array is being used like a scalar
-        if let Some(rhs_var) = find_variable(func, &rhs_expr.name) {
+        if let Some(rhs_var) = find_variable(&func, &rhs_expr.name) {
             if rhs_var.is_array {
                 return Err(format!(
                     "Type mismatch: array integer variable '{}' used as a scalar",

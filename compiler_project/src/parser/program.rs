@@ -64,9 +64,15 @@ pub fn add_function(table: &mut SymbolTable, name: String) -> Result<(), String>
 }
 
 pub fn add_param(table: &mut SymbolTable, func_name: &str, var: Var) -> Result<(), String> {
+    // SEMANTIC CHECK: "Creating an array of size <= 0"
+    if var.is_array && var.size <= 0 {
+        return Err(format!("Array '{}' must have size > 0", var.name));
+    }
+
     let func = find_function_mut(table, func_name)
         .ok_or_else(|| format!("Function '{}' not found", func_name))?;
 
+    // SEMANTIC CHECK: Defining a variable more than once
     if variable_exists(func, &var.name) {
         return Err(format!("Variable '{}' defined more than once", var.name));
     }
@@ -76,9 +82,15 @@ pub fn add_param(table: &mut SymbolTable, func_name: &str, var: Var) -> Result<(
 }
 
 pub fn add_local(table: &mut SymbolTable, func_name: &str, var: Var) -> Result<(), String> {
+    // SEMANTIC CHECK: "Creating an array of size <= 0"
+    if var.is_array && var.size <= 0 {
+        return Err(format!("Array '{}' must have size > 0", var.name));
+    }
+    
     let func = find_function_mut(table, func_name)
         .ok_or_else(|| format!("Function '{}' not found", func_name))?;
 
+    // SEMANTIC CHECK: Defining a variable more than once
     if variable_exists(func, &var.name) {
         return Err(format!("Variable '{}' defined more than once", var.name));
     }
@@ -103,6 +115,7 @@ pub fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<String, S
         }
     }
 
+    // SEMANTIC CHECK: "Not defining a main function"
     if find_function(&table, "main").is_none() {
         return Err(String::from("No 'main' function defined"));
     }

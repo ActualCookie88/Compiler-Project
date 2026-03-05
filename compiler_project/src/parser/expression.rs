@@ -48,7 +48,7 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut Symb
 }
 
 pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
-    let expr = parse_expression(tokens, index, table, current_func)?;
+    let mut expr = parse_expression(tokens, index, table, current_func)?;
 
     let operation = match tokens[*index] {
         Token::Less => "lt",
@@ -65,20 +65,19 @@ pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize, table: &
     let dest = create_temp();
 
     // Combine IR
-    let code = format!("{}{}%int {}\n%{} {}, {}, {}\n",
-        expr.code,
-        expr2.code,
-        dest,
-        operation,
-        dest,
-        expr.name,
-        expr2.name
-    );
-
-    Ok(Expression {
-        code, 
+    expr = Expression {
+        code: format!("{}{}%int {}\n%{} {}, {}, {}\n",
+            expr.code,     // previous code
+            expr2.code,    // next operand code
+            dest,          // new temp
+            operation,     // "add" or "sub"
+            dest,          // destination temp
+            expr.name,     // left operand
+            expr2.name     // right operand
+        ),
         name: dest
-    })
+    };
+    Ok(expr)
 }
 
 pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
@@ -123,14 +122,18 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
             let mut code = String::new();
             let var_name = ident.clone();
             
-            // check if function
-            if let Some(_) = find_function(table, &var_name) {
-                if !matches!(tokens[*index], Token::LeftParen) {
-                    return Err(format!("Function '{}' must be called with parentheses", var_name));
-                }
+            // check if function call
+            if matches!(tokens[*index], Token::LeftParen) {
+                
+                // SEMANTIC CHECK: "Calling a function which has not been defined"
+                let func_def = find_function(table, &var_name)
+                    .ok_or_else(|| format!("Function '{}' is not defined", var_name))?;
+                    
                 *index += 1;
-                let mut args: Vec<String> = Vec::new();
+                
+                let mut args: Vec<String> = Vec::new(); // store arguments
 
+                // collect arguments
                 while !matches!(tokens[*index], Token::RightParen) {
                     let arg_expr = parse_expression(tokens, index, table, current_func)?;
                     code = format!("{}{}", code, arg_expr.code);
@@ -149,7 +152,6 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
                 }
 
                 let dest = create_temp();
-                
                 return Ok(Expression {
                     code: format!(
                         "{}%int {}\n%call {}, {}({})\n",
@@ -164,28 +166,33 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
             }
 
             // Otherwise is variable
-            let mut is_array = false;
-            for func in &table.functions {
-                if let Some(var) = find_variable(func, &var_name) {
-                    is_array = var.is_array;
-                    break;
-                }
-            }
+            // SEMANTIC CHECK:
+            let func = find_function(table, current_func)
+                .ok_or_else(|| format!("Current function '{}' not found", current_func))?;
 
-            // array indexing
+            // SEMANTIC CHECK: "Using a variable without having declared it"
+            let var_def = find_variable(func, &var_name)
+                .ok_or_else(|| format!("Variable '{}' used without declaration", var_name))?;
+
+            let is_array = var_def.is_array;
+
+            // array indexing [
             if matches!(tokens[*index], Token::LeftBracket) {
+                // SEMANTIC CHECK: "Type mismatch: using a scalar integer variable as an array of integers"
                 if !is_array {
                     return Err(format!("Variable '{}' is not an array", var_name));
                 }
                 *index += 1;
 
                 let index_expr = parse_expression(tokens, index, table, current_func)?;
-                let dest = create_temp();
 
+                // ]
                 match tokens[*index] {
                     Token::RightBracket => *index += 1,
                     _ => return Err(String::from("Expected ']' after array size")),
                 }
+
+                let dest = create_temp();
                 return Ok(Expression {
                     code: format!(
                         "{}%int {}\n%mov {}, [{} + {}]\n",
@@ -199,6 +206,11 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
                 });
             }
 
+            // SEMANTIC CHECK: "Type mismatch: using an array of integers as a scalar integer"
+            if var_def.is_array {
+                return Err(format!("Variable '{}' is an array but used as scalar", var_name));
+            }
+
             Ok(Expression {
                 code: String::new(),
                 name: var_name,
@@ -208,14 +220,9 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
         // number
         Token::Num(num) => {
             *index += 1;
-            let dest = create_temp();
-
             Ok(Expression {
-                code: format!(
-                    "%int {}\n%mov {}, {}\n",
-                    dest, dest, num
-                ),
-                name: dest,
+                code: String::new(),
+                name: num.to_string(),
             })
         }
 

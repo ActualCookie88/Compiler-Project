@@ -1,6 +1,8 @@
 use crate::token::Token;
 use crate::parser::function::parse_function;
 
+// testing if push works comment
+
 #[derive(Clone)]
 pub struct Var {
     pub name: String,

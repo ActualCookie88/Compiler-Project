@@ -38,14 +38,26 @@ pub fn parse_function(tokens: &Vec<Token>, index: &mut usize, table: &mut Symbol
     // parameters: int a, int b, ...
     if !matches!(tokens[*index], Token::RightParen) {
         // first param
-        let param_code = parse_parameter(tokens, index)?;
-        params.push(param_code);
+        let (param_name, param_code) = parse_parameter(tokens, index)?;
+        params.push(param_code.clone());
+
+        crate::parser::program::add_param(table, &current_func, crate::parser::program::Var {
+                name: param_name.clone(),
+                is_array: false,
+                size: 0,
+            }
+        )?;
 
         // more params
         while matches!(tokens[*index], Token::Comma) {
             *index += 1; 
-            let param_code2 = parse_parameter(tokens, index)?;
-            params.push(param_code2);
+            let (param_name, param_code) = parse_parameter(tokens, index)?;
+            params.push(param_code.clone());
+                crate::parser::program::add_param(table, &current_func, crate::parser::program::Var {
+                name: param_name.clone(),
+                is_array: false,
+                size: 0,
+            })?;
         }
     }
 
@@ -87,7 +99,7 @@ pub fn parse_function(tokens: &Vec<Token>, index: &mut usize, table: &mut Symbol
 }
 
 // parameters: int a, int b, ...
-pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<(String, String), String> {
     // int
     let param_type = match tokens[*index] {
         Token::Int => {
@@ -108,5 +120,5 @@ pub fn parse_parameter(tokens: &Vec<Token>, index: &mut usize) -> Result<String,
 
     let param_code = format!("%{} {}", param_type, param_name);
 
-    return Ok(param_code);
+    return Ok((param_name, param_code));
 }

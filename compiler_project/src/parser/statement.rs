@@ -368,7 +368,7 @@ fn parse_assignment_statement(
         }
         (None, None) => {
             ir_code.push_str(&rhs_expr.code);
-            ir_code.push_str(&format!("%mov {}, {}\n", ident, rhs_expr.name));                      // simple assignment
+            ir_code.push_str(&format!("%mov {}, {}\n", ident, rhs_expr.name));  // simple assignment
         }
         (Some(_), Some(_)) => {
             return Err(String::from(

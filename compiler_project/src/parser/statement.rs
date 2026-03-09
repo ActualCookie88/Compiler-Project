@@ -122,17 +122,19 @@ fn parse_if_statement(
 	    Token::If => *index += 1,
 	    _ => return Err(String::from("Expected 'if' keyword")),
 	}
-    let condition = parse_boolean_expression(tokens, index, table, current_func)?;
-
     let mut ir_code = String::new();
     let mut if_body = String::new();
     let mut else_body = String::new();
+
+    let condition = parse_boolean_expression(tokens, index, table, current_func)?;
+
+    ir_code.push_str(&condition.code);
 
     // labels
     let (if_label, else_label, end_if_label) = create_if_label();
     
     // branch to if
-    ir_code.push_str(&format!("{}%branch_if {}, :{}\n", condition.code, condition.name, if_label));
+    ir_code.push_str(&format!("%branch_if {}, :{}\n", condition.name, if_label));
     ir_code.push_str(&format!("%jmp :{}\n", else_label));
 
     // {
@@ -158,7 +160,9 @@ fn parse_if_statement(
 	}
 
     // else statement
+    let mut has_else = false;
 	if matches!(tokens[*index], Token::Else) {
+        has_else = true;
 		*index += 1;
 		// {
 		match tokens[*index] {
@@ -189,7 +193,9 @@ fn parse_if_statement(
     ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
 
     ir_code.push_str(&format!(":{}\n", else_label));
-    ir_code.push_str(&else_body);
+    if has_else {
+        ir_code.push_str(&else_body);
+    }
 
     ir_code.push_str(&format!(":{}\n", end_if_label));
 

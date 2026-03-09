@@ -42,6 +42,7 @@ pub fn parse_statement(
         Token::If => parse_if_statement(tokens, index, table, current_func),
         Token::While => parse_while_statement(tokens, index, table, current_func),
         Token::Break => parse_break_statement(tokens, index),
+        Token::Continue => parse_continue_statement(tokens, index),
         Token::Ident(_) => {
             if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
                 let expr = parse_expression(tokens, index, table, current_func)?;
@@ -60,6 +61,7 @@ pub fn parse_statement(
     }
 }
 
+static mut LOOP_STACK: Vec<String> = Vec::new();
 // break
 fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     match tokens[*index] {
@@ -73,7 +75,34 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
         _ => return Err(String::from("Break statement must end with a semicolon")),
     }
 
-    return Ok(String::new())
+    let loop_label = unsafe {
+        LOOP_STACK.last().ok_or("Used 'break' outside of a loop")?.clone()
+    };
+
+    Ok(format!("%jmp :{}\n", loop_label))
+}
+
+// continue
+fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+    match tokens[*index] {
+        Token::Continue =>  *index += 1,
+        _ => return Err(String::from("Expected 'continue'")),
+    }
+
+    // ;
+    match tokens[*index] {
+        Token::Semicolon =>  *index += 1,
+        _ => return Err(String::from("Break statement must end with a semicolon")),
+    }
+
+    // get current loop start label
+    let loop_label = unsafe {
+        LOOP_STACK.last().ok_or("Used 'continue' outside of a loop")?.clone()
+    };
+
+    // jump to start of loop
+    Ok(format!("%jmp :{}\n", loop_label))
+
 }
 
 // while loops

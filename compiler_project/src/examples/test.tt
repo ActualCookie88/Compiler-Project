@@ -2,8 +2,6 @@ func main() {
     int i;
     i = 0;
     if i >= 4 {
-        break;
+        i = i + 1;
     }
-    print(i);
-    i = i + 1;
 }

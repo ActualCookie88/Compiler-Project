@@ -135,7 +135,6 @@ fn parse_if_statement(
     
     // branch to if
     ir_code.push_str(&format!("%branch_if {}, :{}\n", condition.name, if_label));
-    ir_code.push_str(&format!("%jmp :{}\n", else_label));
 
     // {
 	match tokens[*index] {
@@ -163,6 +162,7 @@ fn parse_if_statement(
     let mut has_else = false;
 	if matches!(tokens[*index], Token::Else) {
         has_else = true;
+        ir_code.push_str(&format!("%jmp :{}\n", else_label));
 		*index += 1;
 		// {
 		match tokens[*index] {
@@ -188,13 +188,18 @@ fn parse_if_statement(
 	}
 
     // Generate IR
-    ir_code.push_str(&format!(":{}\n", if_label));
-    ir_code.push_str(&if_body);
-    ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
-
-    ir_code.push_str(&format!(":{}\n", else_label));
     if has_else {
+        ir_code.push_str(&format!(":{}\n", if_label));
+        ir_code.push_str(&if_body);
+        ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
+
+        ir_code.push_str(&format!(":{}\n", else_label));
         ir_code.push_str(&else_body);
+    }
+    else {
+        ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
+        ir_code.push_str(&format!(":{}\n", if_label));
+        ir_code.push_str(&if_body);
     }
 
     ir_code.push_str(&format!(":{}\n", end_if_label));

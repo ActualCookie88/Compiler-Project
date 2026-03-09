@@ -126,7 +126,7 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, c
             if matches!(tokens[*index], Token::LeftParen) {
                 
                 // SEMANTIC CHECK: "Calling a function which has not been defined"
-                let func_def = find_function(table, &var_name)
+                find_function(table, &var_name)
                     .ok_or_else(|| format!("Function '{}' is not defined", var_name))?;
                     
                 *index += 1;

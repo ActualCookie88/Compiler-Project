@@ -1,7 +1,27 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
-use crate::parser::expression::{parse_expression, parse_boolean_expression, create_temp};
+use crate::parser::expression::{parse_expression, parse_boolean_expression};
 use crate::parser::program::{SymbolTable, find_function, find_variable};
+
+static mut TEMP_COUNTER: i64 = 0;
+static mut IF_COUNTER: i64 = 0;
+
+fn create_temp() -> String {
+    unsafe {
+        TEMP_COUNTER += 1;
+        format!("_temp{}", TEMP_COUNTER)
+    }
+}
+
+fn create_if_label() -> (String, String, String) {
+    unsafe {
+        IF_COUNTER += 1;
+        let if_true = format!("iftrue{}", IF_COUNTER);
+        let else_label = format!("else{}", IF_COUNTER);
+        let end_if = format!("endif{}", IF_COUNTER);
+        (if_true, else_label, end_if)
+    }
+}
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -102,20 +122,18 @@ fn parse_if_statement(
 	    Token::If => *index += 1,
 	    _ => return Err(String::from("Expected 'if' keyword")),
 	}
+    let condition = parse_boolean_expression(tokens, index, table, current_func)?;
 
-    // (
-    match tokens[*index] {
-        Token::LeftParen => *index += 1,
-        _ => return Err(String::from("Expected '(' after if")),
-    }
+    let mut ir_code = String::new();
+    let mut if_body = String::new();
+    let mut else_body = String::new();
 
-	parse_boolean_expression(tokens, index, table, current_func)?;
-
-    // )
-    match tokens[*index] {
-        Token::RightParen => *index += 1,
-        _ => return Err(String::from("Missing the right parenthesis ')'")),
-    }
+    // labels
+    let (if_label, else_label, end_if_label) = create_if_label();
+    
+    // branch to if
+    ir_code.push_str(&format!("{}%branch_if {}, :{}\n", condition.code, condition.name, if_label));
+    ir_code.push_str(&format!("%jmp :{}\n", else_label));
 
     // {
 	match tokens[*index] {
@@ -126,7 +144,7 @@ fn parse_if_statement(
 	// parse body until }
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
-		parse_statement(tokens, index, table, current_func)?;
+		if_body.push_str(&parse_statement(tokens, index, table, current_func)?);
 
 		if *index == before {
 			return Err("Parser made no progress".to_string());
@@ -139,6 +157,7 @@ fn parse_if_statement(
 		_ => return Err(String::from("Expected '}'")),
 	}
 
+    // else statement
 	if matches!(tokens[*index], Token::Else) {
 		*index += 1;
 		// {
@@ -150,8 +169,8 @@ fn parse_if_statement(
 		// parse body until }
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
-			parse_statement(tokens, index, table, current_func)?;
-
+			else_body.push_str(&parse_statement(tokens, index, table, current_func)?);
+        
 			if *index == before {
 				return Err("Parser made no progress".to_string());
 			}
@@ -164,7 +183,17 @@ fn parse_if_statement(
 		}
 	}
 
-	return Ok(String::new())
+    // Generate IR
+    ir_code.push_str(&format!(":{}\n", if_label));
+    ir_code.push_str(&if_body);
+    ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
+
+    ir_code.push_str(&format!(":{}\n", else_label));
+    ir_code.push_str(&else_body);
+
+    ir_code.push_str(&format!(":{}\n", end_if_label));
+
+    Ok(ir_code)
 }
 
 fn parse_return_statement(

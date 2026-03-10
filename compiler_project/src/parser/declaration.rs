@@ -1,6 +1,6 @@
 use crate::token::Token;
 use crate::parser::program::{SymbolTable, Var, add_local};
-use crate::parser::expression::parse_expression;
+use crate::parser::expression::{parse_expression, Expression};
 
 // int a;   int [8] a;
 pub fn parse_declaration_statement(
@@ -47,6 +47,7 @@ pub fn parse_declaration_statement(
     };
 
     // check if declaration is array or scalar, and add to symbol table accordingly
+    let mut ir_code = String::new();
     match array_size {
         Some(size) => {
             if size <= 0 { // array size semantic check
@@ -75,14 +76,17 @@ pub fn parse_declaration_statement(
                 size: 0,
             })?;
 
-            let mut ir_code = format!("%int {}\n", var_name);
+            ir_code.push_str(&format!("%int {}\n", var_name));
             
             if matches!(tokens[*index], Token::Assign) {
                 *index += 1;
-                let rhs_expr = parse_expression(tokens, index, table, current_func)?.code;
-                if !rhs_expr.is_empty() {
-                    ir_code.push_str(&format!("%mov {}, {}\n", var_name, rhs_expr));
-                }
+                let rhs_expr: Expression = parse_expression(tokens, index, table, current_func)?;
+                
+                // append all IR code for the expression
+                ir_code.push_str(&rhs_expr.code);
+                
+                // move the result into the variable
+                ir_code.push_str(&format!("%mov {}, {}\n", var_name, rhs_expr.name));
             }
 
             match tokens[*index] {

@@ -1,18 +1,10 @@
 use crate::token::Token;
 use crate::parser::program::{ find_function, find_variable, SymbolTable};
+use crate::parser::statement::create_temp;
 
 pub struct Expression {
   pub code: String,
   pub name: String,
-}
-
-static mut VAR_NUM: i64 = 0;
-
-pub fn create_temp() -> String {
-    unsafe {
-        VAR_NUM += 1;
-        format!("_temp{}", VAR_NUM)
-    }
 }
 
 // parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);

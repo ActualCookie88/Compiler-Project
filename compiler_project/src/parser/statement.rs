@@ -6,7 +6,7 @@ use crate::parser::program::{SymbolTable, find_function, find_variable, LoopInfo
 static mut TEMP_COUNTER: i64 = 0;
 static mut IF_COUNTER: i64 = 0;
 
-fn create_temp() -> String {
+pub fn create_temp() -> String {
     unsafe {
         TEMP_COUNTER += 1;
         format!("_temp{}", TEMP_COUNTER)

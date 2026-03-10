@@ -1,12 +1,17 @@
 use crate::token::Token;
 use crate::parser::statement::*;
 use crate::parser::program::SymbolTable;
+use crate::parser::statement::CodeGenState;
 
 // func main(int a, int b) {
 //    # ... statements here...
 // }
 // a loop is done to handle statements.
-pub fn parse_function(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable) -> Result<String, String> {
+pub fn parse_function(tokens: &Vec<Token>, 
+                        index: &mut usize, 
+                        table: &mut SymbolTable,
+                        state: &mut CodeGenState
+                    ) -> Result<String, String> {
     let mut func_code = String::new();
     let mut params: Vec<String> = Vec::new();
 
@@ -79,7 +84,7 @@ pub fn parse_function(tokens: &Vec<Token>, index: &mut usize, table: &mut Symbol
     // statements inside function
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
-        let statement_code = parse_statement(tokens, index, table, &current_func)?;
+        let statement_code = parse_statement(tokens, index, table, &current_func, state)?;
         func_code += &statement_code;
 
         if *index == before {

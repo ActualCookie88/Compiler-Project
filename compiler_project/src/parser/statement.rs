@@ -9,18 +9,27 @@ use crate::parser::program::{SymbolTable, find_function, find_variable};
 // print(a)
 // read(a)
 // returns epsilon if '}'
+
+//for while and nested while
+pub struct CodeGenState {
+    pub label_counter: i32,
+}
+
+
 pub fn parse_statement(
         tokens: &Vec<Token>, 
         index: &mut usize,
         table: &mut SymbolTable,
-        current_func: &str ) -> Result<String, String> {
+        current_func: &str ,
+        state: &mut CodeGenState
+    ) -> Result<String, String> {
     match &tokens[*index] {
         Token::Int => parse_declaration_statement(tokens, index, table, current_func),
         Token::Return => parse_return_statement(tokens, index, table, current_func),
         Token::Print => parse_print_statement(tokens, index, table, current_func),
         Token::Read => parse_read_statement(tokens, index),
-        Token::If => parse_if_statement(tokens, index, table, current_func),
-        Token::While => parse_while_statement(tokens, index, table, current_func),
+        Token::If => parse_if_statement(tokens, index, table, current_func, state),
+        Token::While => parse_while_statement(tokens, index, table, current_func, state),
         Token::Break => parse_break_statement(tokens, index),
         Token::Ident(_) => {
             if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
@@ -61,13 +70,28 @@ fn parse_while_statement(
         tokens: &Vec<Token>,
         index: &mut usize,
         table: &mut SymbolTable,
-        current_func: &str
+        current_func: &str,
+        state: &mut CodeGenState
     ) -> Result<String, String>{
+    
     match tokens[*index] {
         Token::While => *index += 1,
         _ => return Err("Expected 'while'".to_string()),
     }
-    parse_boolean_expression(tokens, index, table, current_func)?;
+
+    state.label_counter += 1;
+    let loop_id = state.label_counter; // unique loop id for generating labels
+    state.label_counter += 1;
+
+    let loop_begin = format!(":loopbegin{}", loop_id);
+    let loop_end = format!(":endloop{}", loop_id);
+
+    let mut code = String::new();
+    code.push_str(&format!("{}\n", loop_begin));
+
+    let condition = parse_boolean_expression(tokens, index, table, current_func)?;
+    code.push_str(&condition.code);
+    code.push_str(&format!("%branch_ifn {}, {}\n", condition.name, loop_end));
     
     match tokens[*index] {
         Token::LeftCurly => *index += 1,
@@ -76,7 +100,7 @@ fn parse_while_statement(
 
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
-        parse_statement(tokens, index, table, current_func)?;
+        code.push_str(&parse_statement(tokens, index, table, current_func, state)?);
 
         if *index == before {
             return Err("Parser made no progress".to_string());
@@ -88,14 +112,17 @@ fn parse_while_statement(
         _ => return Err("Expected '}' to close while block".to_string()),
     }
 
-    return Ok(String::new())
+    code.push_str(&format!("%jmp {}\n", loop_begin));
+    code.push_str(&format!("{}\n", loop_end));
+    return Ok(code)
 }
 
 fn parse_if_statement(
         tokens: &Vec<Token>,
         index: &mut usize,
         table: &mut SymbolTable,
-        current_func: &str
+        current_func: &str,
+        state: &mut CodeGenState
     ) -> Result<String, String>{
 	// if
 	match tokens[*index] {
@@ -126,7 +153,7 @@ fn parse_if_statement(
 	// parse body until }
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
-		parse_statement(tokens, index, table, current_func)?;
+		parse_statement(tokens, index, table, current_func, state)?;
 
 		if *index == before {
 			return Err("Parser made no progress".to_string());
@@ -150,7 +177,7 @@ fn parse_if_statement(
 		// parse body until }
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
-			parse_statement(tokens, index, table, current_func)?;
+			parse_statement(tokens, index, table, current_func, state)?;
 
 			if *index == before {
 				return Err("Parser made no progress".to_string());

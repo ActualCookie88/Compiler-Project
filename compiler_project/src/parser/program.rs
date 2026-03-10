@@ -1,5 +1,6 @@
 use crate::token::Token;
 use crate::parser::function::parse_function;
+use crate::parser::statement::CodeGenState;
 
 // testing if push works comment
 
@@ -102,14 +103,17 @@ pub fn add_local(table: &mut SymbolTable, func_name: &str, var: Var) -> Result<(
 }
 // parse programs with multiple functions
 // loop over everything, outputting generated code.
-pub fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+pub fn parse_program(tokens: &Vec<Token>, 
+                        index: &mut usize, 
+                        state: &mut CodeGenState
+                    ) -> Result<String, String> {
     assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
 
     let mut code = String::new();
     let mut table = SymbolTable { functions: Vec::new() };
-
+    let mut state = CodeGenState { label_counter: 0 };
     while !at_end(tokens, *index) {
-        match parse_function(tokens, index, &mut table) {
+        match parse_function(tokens, index, &mut table, &mut state) {
             Ok(function_code) => {
                 code += &function_code;
             }

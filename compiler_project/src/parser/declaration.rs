@@ -1,5 +1,6 @@
 use crate::token::Token;
 use crate::parser::program::{SymbolTable, Var, add_local};
+use crate::parser::expression::parse_expression;
 
 // int a;   int [8] a;
 pub fn parse_declaration_statement(
@@ -74,12 +75,22 @@ pub fn parse_declaration_statement(
                 size: 0,
             })?;
 
+            let mut ir_code = format!("%int {}\n", var_name);
+            
+            if matches!(tokens[*index], Token::Assign) {
+                *index += 1;
+                let rhs_expr = parse_expression(tokens, index, table, current_func)?.code;
+                if !rhs_expr.is_empty() {
+                    ir_code.push_str(&format!("%mov {}, {}\n", var_name, rhs_expr));
+                }
+            }
+
             match tokens[*index] {
                 Token::Semicolon => *index += 1,
                 _ => return Err("Declaration must end with ';'".to_string()),
             }
 
-            Ok(format!("%int {}\n", var_name))
+            Ok(ir_code)
         }
     }
 }

@@ -12,8 +12,6 @@ use std::fs; // used to interact with the file system
 
 use compiler_project::lexer::lex;
 use compiler_project::parser::parse_program;
-use compiler_project::parser::statement::CodeGenState;
-
 
 mod interpreter;
 
@@ -58,7 +56,7 @@ fn main() {
 
     // parser
     let mut index = 0;
-    match parse_program(&tokens, &mut index, &mut CodeGenState { label_counter: 0 }) {
+    match parse_program(&tokens, &mut index) {
         Ok(generated_code) => {
             println!("Successfully Parsed The Code.");
             println!("{}", generated_code);

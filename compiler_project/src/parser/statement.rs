@@ -1,7 +1,7 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression};
-use crate::parser::program::{SymbolTable, find_function, find_variable};
+use crate::parser::program::{SymbolTable, find_function, find_variable, LoopInfo, CodeGenState};
 
 static mut TEMP_COUNTER: i64 = 0;
 static mut IF_COUNTER: i64 = 0;
@@ -30,10 +30,6 @@ fn create_if_label() -> (String, String, String) {
 // read(a)
 // returns epsilon if '}'
 
-//for while and nested while
-pub struct CodeGenState {
-    pub label_counter: i32,
-}
 
 
 pub fn parse_statement(
@@ -50,8 +46,8 @@ pub fn parse_statement(
         Token::Read => parse_read_statement(tokens, index),
         Token::If => parse_if_statement(tokens, index, table, current_func, state),
         Token::While => parse_while_statement(tokens, index, table, current_func, state),
-        Token::Break => parse_break_statement(tokens, index),
-        Token::Continue => parse_continue_statement(tokens, index),
+        Token::Break => parse_break_statement(tokens, index, state),
+        Token::Continue => parse_continue_statement(tokens, index, state),
         Token::Ident(_) => {
             if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
                 let expr = parse_expression(tokens, index, table, current_func)?;
@@ -70,9 +66,8 @@ pub fn parse_statement(
     }
 }
 
-static mut LOOP_STACK: Vec<String> = Vec::new();
 // break
-fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
     match tokens[*index] {
         Token::Break =>  *index += 1,
         _ => return Err(String::from("Expected 'break'")),
@@ -84,15 +79,13 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
         _ => return Err(String::from("Break statement must end with a semicolon")),
     }
 
-    let loop_label = unsafe {
-        LOOP_STACK.last().ok_or("Used 'break' outside of a loop")?.clone()
-    };
+    let loop_end = state.loop_stack.last().ok_or("Used 'break' outside of a loop")?.end.clone();
 
-    Ok(format!("%jmp :{}\n", loop_label))
+    Ok(format!("%jmp {}\n", loop_end))
 }
 
 // continue
-fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
     match tokens[*index] {
         Token::Continue =>  *index += 1,
         _ => return Err(String::from("Expected 'continue'")),
@@ -104,14 +97,9 @@ fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<St
         _ => return Err(String::from("Break statement must end with a semicolon")),
     }
 
-    // get current loop start label
-    let loop_label = unsafe {
-        LOOP_STACK.last().ok_or("Used 'continue' outside of a loop")?.clone()
-    };
+    let loop_start = state.loop_stack.last().ok_or("Used 'continue' outside of a loop")?.begin.clone();
 
-    // jump to start of loop
-    Ok(format!("%jmp :{}\n", loop_label))
-
+    Ok(format!("%jmp {}\n", loop_start))
 }
 
 // while loops
@@ -128,12 +116,14 @@ fn parse_while_statement(
         _ => return Err("Expected 'while'".to_string()),
     }
 
-    state.label_counter += 1;
     let loop_id = state.label_counter; // unique loop id for generating labels
     state.label_counter += 1;
 
     let loop_begin = format!(":loopbegin{}", loop_id);
     let loop_end = format!(":endloop{}", loop_id);
+
+    // push loop info
+    state.loop_stack.push(LoopInfo { begin: loop_begin.clone(), end: loop_end.clone() });
 
     let mut code = String::new();
     code.push_str(&format!("{}\n", loop_begin));
@@ -163,6 +153,10 @@ fn parse_while_statement(
 
     code.push_str(&format!("%jmp {}\n", loop_begin));
     code.push_str(&format!("{}\n", loop_end));
+
+    // pop loop info
+    state.loop_stack.pop();
+
     return Ok(code)
 }
 
@@ -201,7 +195,7 @@ fn parse_if_statement(
 	// parse body until }
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
-		if_body.push_str(&parse_statement(tokens, index, table, current_func)?);
+		if_body.push_str(&parse_statement(tokens, index, table, current_func, state)?);
 
 		if *index == before {
 			return Err("Parser made no progress".to_string());
@@ -229,7 +223,7 @@ fn parse_if_statement(
 		// parse body until }
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
-			else_body.push_str(&parse_statement(tokens, index, table, current_func)?);
+			else_body.push_str(&parse_statement(tokens, index, table, current_func, state)?);
         
 			if *index == before {
 				return Err("Parser made no progress".to_string());

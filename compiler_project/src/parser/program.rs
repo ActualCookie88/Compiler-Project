@@ -1,6 +1,5 @@
 use crate::token::Token;
 use crate::parser::function::parse_function;
-use crate::parser::statement::CodeGenState;
 
 // testing if push works comment
 
@@ -20,6 +19,26 @@ pub struct Func {
 
 pub struct SymbolTable {
     pub functions: Vec<Func>,
+}
+
+#[derive(Clone)]
+pub struct LoopInfo {
+    pub begin: String,
+    pub end: String,
+}
+
+pub struct CodeGenState {
+    pub label_counter: i64,
+    pub loop_stack: Vec<LoopInfo>,  // stack for active loops
+}
+
+impl CodeGenState {
+    pub fn new() -> Self {
+        CodeGenState {
+            label_counter: 1,
+            loop_stack: Vec::new(),
+        }
+    }
 }
 
 // helpers
@@ -105,13 +124,12 @@ pub fn add_local(table: &mut SymbolTable, func_name: &str, var: Var) -> Result<(
 // loop over everything, outputting generated code.
 pub fn parse_program(tokens: &Vec<Token>, 
                         index: &mut usize, 
-                        state: &mut CodeGenState
                     ) -> Result<String, String> {
     assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
 
     let mut code = String::new();
     let mut table = SymbolTable { functions: Vec::new() };
-    let mut state = CodeGenState { label_counter: 0 };
+    let mut state = CodeGenState::new();
     while !at_end(tokens, *index) {
         match parse_function(tokens, index, &mut table, &mut state) {
             Ok(function_code) => {

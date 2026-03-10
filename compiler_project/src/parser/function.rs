@@ -1,7 +1,6 @@
 use crate::token::Token;
 use crate::parser::statement::*;
-use crate::parser::program::SymbolTable;
-use crate::parser::statement::CodeGenState;
+use crate::parser::program::{SymbolTable, CodeGenState};
 
 // func main(int a, int b) {
 //    # ... statements here...

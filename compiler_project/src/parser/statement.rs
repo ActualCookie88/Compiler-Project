@@ -1,7 +1,27 @@
 use crate::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
-use crate::parser::expression::{parse_expression, parse_boolean_expression, create_temp};
+use crate::parser::expression::{parse_expression, parse_boolean_expression};
 use crate::parser::program::{SymbolTable, find_function, find_variable};
+
+static mut TEMP_COUNTER: i64 = 0;
+static mut IF_COUNTER: i64 = 0;
+
+fn create_temp() -> String {
+    unsafe {
+        TEMP_COUNTER += 1;
+        format!("_temp{}", TEMP_COUNTER)
+    }
+}
+
+fn create_if_label() -> (String, String, String) {
+    unsafe {
+        IF_COUNTER += 1;
+        let if_true = format!("iftrue{}", IF_COUNTER);
+        let else_label = format!("else{}", IF_COUNTER);
+        let end_if = format!("endif{}", IF_COUNTER);
+        (if_true, else_label, end_if)
+    }
+}
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -31,6 +51,7 @@ pub fn parse_statement(
         Token::If => parse_if_statement(tokens, index, table, current_func, state),
         Token::While => parse_while_statement(tokens, index, table, current_func, state),
         Token::Break => parse_break_statement(tokens, index),
+        Token::Continue => parse_continue_statement(tokens, index),
         Token::Ident(_) => {
             if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
                 let expr = parse_expression(tokens, index, table, current_func)?;
@@ -49,6 +70,7 @@ pub fn parse_statement(
     }
 }
 
+static mut LOOP_STACK: Vec<String> = Vec::new();
 // break
 fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
     match tokens[*index] {
@@ -62,7 +84,34 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Strin
         _ => return Err(String::from("Break statement must end with a semicolon")),
     }
 
-    return Ok(String::new())
+    let loop_label = unsafe {
+        LOOP_STACK.last().ok_or("Used 'break' outside of a loop")?.clone()
+    };
+
+    Ok(format!("%jmp :{}\n", loop_label))
+}
+
+// continue
+fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+    match tokens[*index] {
+        Token::Continue =>  *index += 1,
+        _ => return Err(String::from("Expected 'continue'")),
+    }
+
+    // ;
+    match tokens[*index] {
+        Token::Semicolon =>  *index += 1,
+        _ => return Err(String::from("Break statement must end with a semicolon")),
+    }
+
+    // get current loop start label
+    let loop_label = unsafe {
+        LOOP_STACK.last().ok_or("Used 'continue' outside of a loop")?.clone()
+    };
+
+    // jump to start of loop
+    Ok(format!("%jmp :{}\n", loop_label))
+
 }
 
 // while loops
@@ -129,20 +178,19 @@ fn parse_if_statement(
 	    Token::If => *index += 1,
 	    _ => return Err(String::from("Expected 'if' keyword")),
 	}
+    let mut ir_code = String::new();
+    let mut if_body = String::new();
+    let mut else_body = String::new();
 
-    // (
-    match tokens[*index] {
-        Token::LeftParen => *index += 1,
-        _ => return Err(String::from("Expected '(' after if")),
-    }
+    let condition = parse_boolean_expression(tokens, index, table, current_func)?;
 
-	parse_boolean_expression(tokens, index, table, current_func)?;
+    ir_code.push_str(&condition.code);
 
-    // )
-    match tokens[*index] {
-        Token::RightParen => *index += 1,
-        _ => return Err(String::from("Missing the right parenthesis ')'")),
-    }
+    // labels
+    let (if_label, else_label, end_if_label) = create_if_label();
+    
+    // branch to if
+    ir_code.push_str(&format!("%branch_if {}, :{}\n", condition.name, if_label));
 
     // {
 	match tokens[*index] {
@@ -153,7 +201,7 @@ fn parse_if_statement(
 	// parse body until }
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
-		parse_statement(tokens, index, table, current_func, state)?;
+		if_body.push_str(&parse_statement(tokens, index, table, current_func)?);
 
 		if *index == before {
 			return Err("Parser made no progress".to_string());
@@ -166,7 +214,11 @@ fn parse_if_statement(
 		_ => return Err(String::from("Expected '}'")),
 	}
 
+    // else statement
+    let mut has_else = false;
 	if matches!(tokens[*index], Token::Else) {
+        has_else = true;
+        ir_code.push_str(&format!("%jmp :{}\n", else_label));
 		*index += 1;
 		// {
 		match tokens[*index] {
@@ -177,8 +229,8 @@ fn parse_if_statement(
 		// parse body until }
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
-			parse_statement(tokens, index, table, current_func, state)?;
-
+			else_body.push_str(&parse_statement(tokens, index, table, current_func)?);
+        
 			if *index == before {
 				return Err("Parser made no progress".to_string());
 			}
@@ -191,7 +243,24 @@ fn parse_if_statement(
 		}
 	}
 
-	return Ok(String::new())
+    // Generate IR
+    if has_else {
+        ir_code.push_str(&format!(":{}\n", if_label));
+        ir_code.push_str(&if_body);
+        ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
+
+        ir_code.push_str(&format!(":{}\n", else_label));
+        ir_code.push_str(&else_body);
+    }
+    else {
+        ir_code.push_str(&format!("%jmp :{}\n", end_if_label));
+        ir_code.push_str(&format!(":{}\n", if_label));
+        ir_code.push_str(&if_body);
+    }
+
+    ir_code.push_str(&format!(":{}\n", end_if_label));
+
+    Ok(ir_code)
 }
 
 fn parse_return_statement(

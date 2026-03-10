@@ -1,42 +1,7 @@
-func foo(int i, int j) {
-    return i + j;
-}
-
 func main() {
-    # variable declarations
-    int a;
-    int b;
-    int c;
-    int x;
-    int y;
-    int [4] array;
-    int variable;
-
-    # basic arithmetic
-    a = 3;
-    b = 5;
-    c = a + b - 2;
-
-    # multiplication, division, modulus
-    a = 4 * 2 / 3 % 2;
-
-    # parentheses and nested expressions
-    b = (1 + 2) * 3;
-
-    # identifiers and function calls
-    # variable = foo(5, 6);
-    variable = x * y;
-
-    # boolean expressions
-    if (a < b) {
-        variable = 1;
-    } else {
-        variable = 0;
+    int i;
+    i = 0;
+    if i >= 4 {
+        i = i + 1;
     }
-
-    if (c == (a + b)) {
-        array[0] = c;
-    }
-
-    print(a+b);
 }

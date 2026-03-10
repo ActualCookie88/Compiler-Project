@@ -1,7 +1,9 @@
 func main() {
-  int a;
-  int b;
-  a = 100;
-  b = 50;
-  c = a + b;  # using a variable 'c' without declaring it.
+    int i;
+    i = 0;
+    break;  # Error. Used 'break' outside of a loop.
+    while i < 10 {
+        print(i);
+        i = i + 1;
+    }
 }

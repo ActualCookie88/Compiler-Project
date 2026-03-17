@@ -1,0 +1,44 @@
+# A simple program which shows mathematical operations.
+
+func main() {
+  int a;
+  int b;
+  int c;
+
+  # This should output '150'
+  a = 100;
+  b = 50;
+  c = a + b;
+  print(c);
+
+  # This should output '50'
+  a = 100;
+  b = 50;
+  c = a - b;
+  print(c);
+
+  # This should output '5000'
+  a = 100;
+  b = 50;
+  c = a * b;
+  print(c);
+
+  # This should output '2'
+  a = 100;
+  b = 50;
+  c = a / b;
+  print(c);
+
+  # This should output '0'
+  a = 100;
+  b = 50;
+  c = a % b;
+  print(c);
+
+  # I leave 'complex expression' as an exercise for students.
+  # Complex Expression. (4 + 2) * 7
+  a = 4;
+  b = 7;
+  c = (a + 2) * b;
+  print(c);
+}

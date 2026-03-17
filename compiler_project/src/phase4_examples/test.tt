@@ -1,0 +1,7 @@
+func main() {
+    int i;
+    i = 0;
+    if i >= 4 {
+        i = i + 1;
+    }
+}

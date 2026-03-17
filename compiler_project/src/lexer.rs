@@ -11,7 +11,7 @@ pub fn lex(code: &str) -> Result<Vec<Token>, String> {
 
     match c {
     // whitespace 
-    ' ' | '\n' => {
+    ' ' | '\n' | '\r' | '\t' => {
       i += 1;
     }
     // comments

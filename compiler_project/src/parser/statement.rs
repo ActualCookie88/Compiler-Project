@@ -3,25 +3,26 @@ use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression};
 use crate::parser::program::{SymbolTable, find_function, find_variable, LoopInfo, CodeGenState};
 
-static mut TEMP_COUNTER: i64 = 0;
-static mut IF_COUNTER: i64 = 0;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static TEMP_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static IF_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 pub fn create_temp() -> String {
-    unsafe {
-        TEMP_COUNTER += 1;
-        format!("_temp{}", TEMP_COUNTER)
-    }
+    let id = TEMP_COUNTER.fetch_add(1, Ordering::SeqCst);
+    format!("_temp{}", id)
 }
 
 fn create_if_label() -> (String, String, String) {
-    unsafe {
-        IF_COUNTER += 1;
-        let if_true = format!("iftrue{}", IF_COUNTER);
-        let else_label = format!("else{}", IF_COUNTER);
-        let end_if = format!("endif{}", IF_COUNTER);
-        (if_true, else_label, end_if)
-    }
+    let id = IF_COUNTER.fetch_add(1, Ordering::SeqCst);
+
+    let if_true = format!("iftrue{}", id);
+    let else_label = format!("else{}", id);
+    let end_if = format!("endif{}", id);
+
+    (if_true, else_label, end_if)
 }
+
 // parsing a statement such as:
 // int a;
 // a = a + b;
@@ -29,9 +30,6 @@ fn create_if_label() -> (String, String, String) {
 // print(a)
 // read(a)
 // returns epsilon if '}'
-
-
-
 pub fn parse_statement(
         tokens: &Vec<Token>, 
         index: &mut usize,

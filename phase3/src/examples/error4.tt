@@ -1,5 +1,0 @@
-func main() {
-  # Error. Duplicate variables.
-  int a;
-  int a;
-}

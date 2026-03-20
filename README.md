@@ -76,3 +76,18 @@ Example command:
 ```bash
 cargo run -- examples_parser/array.tt
 ```
+
+## Acknowledgements
+
+This project was completed as part of the course **CS152: Compiler Design** at the University of California, Riverside.
+
+I would like to thank the course instructor and teaching staff for providing:
+- The project specifications and grammar for the Teh Tarik programming language
+- Example test cases and guidance throughout each phase
+- The interpreter (`interpreter.rs`) used for executing the generated IR
+
+Course materials, including lecture notes and assignment descriptions, were used as references 
+for implementing the lexer, parser, and code generation phases of this project.
+
+All code written for this project is our own, except for any provided starter code or materials 
+explicitly given as part of the assignment.

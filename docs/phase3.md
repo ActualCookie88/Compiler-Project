@@ -1,30 +1,39 @@
-# Doing Simple Code Generation in Rust
+# Phase 3: Simple Code Generation
 
-### Introduction
+## Overview
+In this phase, we implement **code generation** for the Teh Tarik programming language.
 
-Now that the lexer and parser is built, we can now do code generation. You will take a high level 
-language grammar and translate that high level language grammar into an intermediate representation.
-Represent the intermediate representation as a `String`.
+We translate a syntactically correct program into an **Intermediate Representation (IR)**, stored as a `String`, and execute it using a provided interpreter.
 
-We will be splitting code generation into two halves: "simple" code generation and "complicated" code
-generation. In "simple" code generation, you will be doing function calls, move statements, arithmetic
-statements, return statements, and input/output statements. Anything that is not a function call, move statement, or
-arithmetic statement will be done in the second half of the assignment. **This means that comparison
-operations, labels, and branches will NOT be done during this phase. Loops and branching statements
-will be done in Phase 4.**
+This phase focuses on **linear control flow only** (no branching or loops).
 
-We are doing only "simple" code generation, that is code that contains linear control flow and starts from
-the top and ends at the bottom, with no branches or jumping around. 
+## Objectives
+- Generate IR from parsed programs
+- Handle arithmetic, assignments, functions, and arrays
+- Execute IR using the interpreter
+- Perform semantic error checking
 
-For Phase 3, you will be doing code generation for the following statements:
-* add
-* math 
-* array
-* function
+## Scope
+
+This phase includes:
+- Variable declarations
+- Assignments (`%mov`)
+- Arithmetic (`%add`, `%sub`, `%mult`, `%div`, `%mod`)
+- Function calls (`%call`)
+- Return statements (`%ret`)
+- Input/Output (`%out`, `%input`)
+- Arrays
+
+This phase does NOT include:
+- Branching (`if`, `else`)
+- Loops (`while`)
+- Labels or jumps
+
+Those are implemented in Phase 4.
 
 **You will also be doing semantic error checking (see the semantic error checking Phase 3 section)**
 
-### Unsafe
+## Unsafe (Temporary Variables)
 
 Documentation: [Unsafe](https://doc.rust-lang.org/std/keyword.unsafe.html)
 
@@ -51,7 +60,7 @@ We will use this function to create a unique intermediate value every time the f
 first time this function is called, it will create a string `_temp0`, the second time it is called, 
 it will generate a string `_temp1`, and so on. `VAR_NUM` is a global variable.
 
-### Include Files
+## Include Files
 
 You can include other files, such as `interpeter.rs` using:
 
@@ -63,10 +72,9 @@ This will include the `interpreter.rs` file into `main.rs` for use. This is simi
 in C.
 
 
-### Running the Example
+## Running the Example
 
-Just like Phase 1 and Phase 2, you can hit `cargo run` to run the interpreter. To run the interpreter
-on the examples, type `cargo run examples/add.tt` to run the interpreter on `examples/add.tt`. Observe
+Just like Phase 1 and Phase 2, you can hit `cargo run` to run the interpreter. Observe
 the control flow of the program and take note of how the intermediate representation is generated.
 
 Output the intermediate represention as a `String`. Afterward, call `execute_ir` to interpret and
@@ -98,7 +106,7 @@ Err(e) => {
 }
 ```
 
-### Interpreter
+## Interpreter
 
 Copy the `interpreter.rs` file and paste it into your project. In your main file `main.rs`, do the following:
 ```
@@ -118,7 +126,7 @@ You can include the interpreter found in `interpreter.rs` as part of your projec
 any modifications to the interpreter. You can make any change you want to the existing interpreter code.
 The interpreter code as found in `interpreter.rs` should be sufficient to complete Phase 3 and 4.
 
-### IR Syntax and Semantics
+## IR Syntax and Semantics
 
 An intermediate representation (IR) is the data structure or code used internally by an interpreter or compiler to
 represent pseudo-assembly. A (low-level/backend) compiler generally takes the IR, performs compiler optimizations 
@@ -132,6 +140,8 @@ be generating IR for a provided interpreter, and running that interpreter to run
 interpreter is available in `interpreter.rs`.
 
 **Pass the IR to the function `execute_ir` as a string, and the interpreter will run the code for you.**
+
+### Core Instructions
 
 Here is the entire instruction set IR for the interpreter you will be using to run the generated code:
 
@@ -171,7 +181,7 @@ The semicolon denotes a comment that goes until the end of the line.
 %add c, a, b; adding 'a' and 'b' to get 'c'
 ```
 
-### Translating Expressions into IR
+## Translating Expressions into IR
 
 Trivial Expressions such as `c = a + b;` can be translated trivially into `%add c, a, b` easily. However, more complex expressions, such as
 `d = a + b * c` requires special handling. `b * c` needs to be done before adding it to `a`, because expressions must follow operator 
@@ -201,7 +211,7 @@ struct Expression {
 }
 ```
 
-### Output
+## Output
 
 In previous phases of the project, you created a lexical analyzer and parser for your custom 
 programming language. In this phase of the project, you will take a syntactically correct program, 
@@ -225,22 +235,42 @@ error.
 Just like the previous phase, you should perform one-pass code generation and directly output the 
 generated code. There is no need to build or traverse a syntax tree. However, you will need to 
 maintain a symbol table during code generation.
-
-Do code generation **ONLY** for the following example programs:
-* add.tt
-* array.tt
-* function.tt
-* math.tt
   
 We will do code generation for the other half of the example programs in the next and final phase.
 
-### Generated Example IR Code
+## Requirements
+
+- Generate IR directly (no AST required)
+- Maintain a symbol table
+- Perform one-pass code generation
+- Ensure correct execution via interpreter
+
+## Semantic Error Checking
+
+You must detect:
+
+- Using undeclared variables
+- Calling undefined functions
+- Missing `main` function
+- Duplicate variable declarations
+- Using arrays as scalars
+- Using scalars as arrays
+- Array size <= 0
+
+## Supported Test Cases
+
+- add.tt
+- math.tt
+- array.tt
+- function.tt
+
+## Generated Example IR Code
 
 Here are some examples of possible generated IR outputs. One can generate any IR code for the given code, as
 long as the generated IR functions in the same way. **Any IR generated is acceptable, as long as it outputs
 the same numbers**.
 
-#### add
+### add
 Given the following `add.tt` program:
 
 ```
@@ -275,7 +305,7 @@ The output of `add.tt` should be:
 ```
 
 ---
-#### math
+### math
 Given the following `math.tt` program:
 ```
 # A simple program which shows mathematical operations.
@@ -376,7 +406,7 @@ The output of `math.tt` should be:
 ```
 
 ---
-#### array
+### array
 
 Given the follow `array.tt` example:
 
@@ -500,40 +530,6 @@ The output of the program should be:
 12
 144
 ```
-
-### Semantic Error Check
-
-In addition to IR code generation, you must also catch semantic errors. The semantic errors you are assigned to catch are:
-
-* Using a variable without having declared it
-* Calling a function which has not been defined
-* Not defining a main function
-* Defining a variable more than once
-* Type mismatch: using a scalar integer variable as an array of integers
-* Type mismatch: using an array of integers as a scalar integer
-* Creating an array of size <= 0.
-
-You may optionally catch other possible semantic errors in addition to the ones list here (e.g. calling a function with the
-wrong number of parameters), but **that is optional** and not required.
-
-To catch semantic errors, you will need to create a data structure called a symbol table. A symbol table is a data structure 
-**you create** that keeps track of each identifier along with some identifier data associated with it. Any data structure or combination of data structures may be used 
-as a symbol table (e.g. arrays, linked lists, trees, hash tables). The most basic data structure you may create for this project is 
-an array, then using linear search on an array to catch semantic errors.
-
-### Rubric
-
-Phase 3 will be graded out of a total of 100 points. Partial credit will be given if a test case is 
-partially correct. Partial credit will be given if a test case is partially correct. Code correctness will 
-be tested using the “cargo run” and/or “cargo test” command.
-
-Demo/Group Participation/Code compiles 10 points
-
-Each of the following test cases are worth 20 points each:
-* add.tt
-* math.tt
-* array.tt
-* function.tt
 
 Error handling 10 points
 

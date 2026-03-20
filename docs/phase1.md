@@ -251,6 +251,15 @@ fn create_identifier(code: &str) -> Token {
   }
 }
 ```
+Your lexer must correctly tokenize all provided test programs:
+- add.tt
+- math.tt
+- array.tt
+- function.tt
+- loop.tt
+- if.tt
+- nested_loop.tt
+- break.tt
 
 ## Example Output
 

@@ -1,34 +1,29 @@
-# Doing Complex Code Generation in Rust
+# Phase 4: Complex Code Generation
 
-### Introduction
+## Overview
 
-Now that "simple" code generation is completed, now we can move to complex code generation,
-i.e. code with branching control flow that jumps all over the place. In the previous Phase,
-code execution was simple, only occuring in a linear fashion. Now, code that can now perform 
-loops and branch to different locations with many complex execution paths.
+Now that the lexer, parser, and simple code generation are complete, we now move on to 
+**complex code generation**. In this phase, programs will no longer execute strictly in a 
+linear fashion. Instead, execution may branch and loop depending on conditions.
 
-For Phase 4, you will be doing code generation for the following control flow statements:
-* While loops
-* If and If/Else Statements
-* Break and Continue
-* Nested While Loops
+In Phase 4, you will generate IR for control flow constructs such as:
+- While loops
+- If and If/Else statements
+- Break and Continue
+- Nested loops
 
-You will also be doing semantic error checking (see the semantic error checking Phase 4 section)
+You will also continue performing **semantic error checking**.
 
-### Reviewing Structured Programming
+## What is Complex Code Generation?
 
-In computer hardware, there is no such instruction corresponds to a "while" loop, and there is
-no such instruction that corresponds to an "if" statement. Instead, these high-level language
-constructs are translated into "jump" and "branch" statements. Plain old "jump" and "branch" assembly 
-language statements are then executed on the hardware. There is no such thing as a "while" loop
-in hardware, this is a human software construct to help humans model control flow in a structured
-way.
+In high-level languages, constructs like `while` loops and `if` statements are used to control flow. 
+However, these constructs do not exist in hardware. Instead, they must be translated into:
+- Labels
+- Conditional branches
+- Unconditional jumps
 
-To generate IR that does “While loops” and “If statements”, translate the behavioral structures into their corresponding
-conditional branch, labels, and unconditional jump statements. One should be able to nest loops inside loops, and nest if 
-statements within if statements. A user program should be able to define multiple loops within a program. In an if/else statement, if the if
-condition results in true, the if code block should be executed. And if the if condition results in
-false, the else code block should be executed.
+Your goal is to convert structured programming constructs into low-level IR instructions 
+that simulate the same behavior.
 
 ### Output 
 In the previous Phase 3 of the project, you generated the corresponding intermediate code for the 
@@ -43,7 +38,7 @@ You should perform one-pass code generation and directly output the generated co
 need to build or traverse a syntax tree. However, you will need to maintain a symbol table during 
 code generation.
 
-### Error handling
+## Error handling
 If a “break” or “continue” is placed outside of a loop, the compiler should treat that as an error. 
 “break” and “continue” can only be used inside loops, and therefore any “break” or “continue” 
 statement outside a loop should be treated as an error. If an error occurs, do not generate any code, 
@@ -53,30 +48,9 @@ instead, print out an error messsage such as “Error: break statement is outsid
 the high-level code, the code generator should not output any code. The compiler may optionally 
 catch additional error messages.
 
-### Interpreter
+## IR Syntax and Semantics
 
-Copy the `interpreter.rs` file and paste it into your project. In your main file `main.rs`, do the following:
-```
-mod interpreter;
-
-fn main() {
-
-  // ....rest of the compiler
-
-  let generated_code: String = parse(tokens);
-  interpreter::execute_ir(&generated_code);
-}
-
-```
-
-You can include the interpreter found in `interpreter.rs` as part of your project. You do **not** need to make
-any modifications to the interpreter. You can make any change you want to the existing interpreter code.
-The interpreter code as found in `interpreter.rs` should be sufficient to complete Phase 3 and 4. **This is
-the same exact interpreter found in Phase 3.**
-
-### IR Syntax and Semantics
-
-There are 4 relevant instructions for doing branching and jumping. They are as follows:
+The following instructions are used for branching and looping:
 
 | Instruction               | Description                                                                      |
 |---------------------------|----------------------------------------------------------------------------------|
@@ -105,37 +79,6 @@ Use `%branch_if` to jump to the `:label` only if the `var` is 1. `%branch_if` wi
 `%branch_ifn` is the opposite: it only jumps to the `:label` if the `var` is 0. `%branch_ifn` will do
 nothing if the `var` is 1.
 
-Here is the entire instruction set for the IR, if you need a refresher of what the instructions are.
-
-| Instruction               | Description                                                                      |
-|---------------------------|----------------------------------------------------------------------------------|
-| %func func(%int a, %int b)| declares a function named 'function' with parameters a and b in that order       |
-| %endfunc                  | closes the existing function                                                     |
-| %int  variable            | declares a 32 bit integer value named 'variable'                                 |
-| %int [] array, 32         | declares an array of 32 bit integers of length 32                                |
-| %mov  dest, src1          | dest = src1                                                                      |
-| %mov  [array + i], src1   | array[i] = src1                                                                  |
-| %mov  dest, [array + i]   | dest = array[i]                                                                  |
-| %add  dest, src1, src2    | dest = src1 +  src2                                                              |
-| %sub  dest, src1, src2    | dest = src1 -  src2                                                              |
-| %mult dest, src1, src2    | dest = src1 *  src2                                                              |
-| %div  dest, src1, src2    | dest = src1 /  src2                                                              |
-| %mod  dest, src1, src2    | dest = src1 %  src2                                                              |
-| %lt   dest, src1, src2    | dest = src1 <  src2                                                              |  
-| %le   dest, src1, src2    | dest = src1 <= src2                                                              |
-| %neq  dest, src1, src2    | dest = src1 != src2                                                              |
-| %eq   dest, src1, src2    | dest = src1 == src2                                                              |
-| %gt   dest, src1, src2    | dest = src1 >  src2                                                              |
-| %ge   dest, src1, src2    | dest = src1 >= src2                                                              |
-| %out  value               | prints out the value to standard output                                          |
-| %input value              | store an integer from standard input into 'value'                                |
-| %call dest, func(a,b)     | calls a function 'func' with parameters (a,b). Stores the return value in 'dest' |
-| %ret  value               | return 'value' from the function.                                                |
-| :label                    | declares a label ':label'. Used in branching code                                |
-| %jmp  :label              | jumps to ':label' unconditionally                                                |
-| %branch_if var, :label    | jumps to ':label' if var is 1. Does nothing if var is 0                          |
-| %branch_ifn var, :label   | jumps to ':label' if var is 0. Does nothing if var is 1                          |
-
 IR instructions take up exactly one line per instruction. You cannot output multiple IR instructions on a single line. 
 Anything after the semicolon `;` will be treated as a comment.
 The semicolon denotes a comment that goes until the end of the line.
@@ -143,7 +86,116 @@ The semicolon denotes a comment that goes until the end of the line.
 %add c, a, b; adding 'a' and 'b' to get 'c'
 ```
 
-### Generated Example IR Code
+## Translating While Loops
+
+A `while` loop consists of:
+1. A loop start label
+2. A condition check
+3. A branch to exit if false
+4. Loop body
+5. A jump back to the start
+
+### Example
+
+High-level:
+```
+while i < 10 {
+  print(i);
+  i = i + 1;
+}
+```
+IR:
+```
+:loopbegin1
+%int _temp1
+%lt _temp1, i, 10
+%branch_ifn _temp1, :endloop1
+%out i
+%int _temp2
+%add _temp2, i, 1
+%mov i, _temp2
+%jmp :loopbegin1
+:endloop1
+```
+## Translating If / Else Statements
+
+An `if` statement evaluates a condition and branches accordingly.
+
+### Example
+
+High-level:
+```
+if a < b {
+  c = 0;
+} else {
+  c = 1;
+}
+```
+IR:
+```
+%int _temp1
+%lt _temp1, a, b
+%branch_if _temp1, :iftrue1
+%jmp :else1
+:iftrue1
+%mov c, 0
+%jmp :endif1
+:else1
+%mov c, 1
+:endif1
+```
+## Nested Control Flow
+
+Loops and if-statements can be nested inside one another. Each structure must use **unique labels**.
+
+Example structure:
+```
+:loopbegin1
+...
+:loopbegin2
+...
+:endloop2
+...
+:endloop1
+```
+## Break and Continue
+
+### Break
+
+A `break` exits the nearest loop.
+
+IR:
+```
+%jmp :endloopX
+```
+### Continue
+
+A `continue` skips to the next iteration of the loop.
+
+IR:
+```
+%jmp :loopbeginX
+```
+To implement this correctly, you must maintain a **loop stack** that tracks:
+- Loop start labels
+- Loop end labels
+
+## Requirements
+
+Your code generator must:
+
+- Correctly translate:
+  - While loops
+  - If / Else statements
+  - Nested control flow
+  - Break and Continue
+- Generate valid IR using labels and branches
+- Maintain proper control flow
+- Perform semantic error checking
+- Ensure all labels are unique
+
+
+## Generated Example IR Code
 
 Here are some examples of possible generated IR outputs. One can generate any IR code for the given code, as
 long as the generated IR functions in the same way. **Any IR generated is acceptable, as long as it outputs
@@ -518,7 +570,7 @@ The output of primes should be:
 97
 ```
 
-### Semantic Error Checking
+## Semantic Error Checking
 
 In addition to doing code generation for if statements, while loops, and branching statements in general, you
 must also do error checking for 'break' and 'continue' outside of a loop.
@@ -535,21 +587,5 @@ func main() {
     }
 }
 ```
-
-### Rubric
-Phase 4 will be graded out of a total of 100 points. Partial credit will be given if a test case is 
-partially correct. Partial credit will be given if a test case is partially correct. Code correctness will 
-be tested using the “cargo run” and/or “cargo test” command.
-
-Demo/Group Participation/Code compiles 10 points
-
-The rest of the example programs are worth 20 points each:
-* loop.tt
-* if.tt
-* nested_loop.tt
-* break.tt
-  
-Error handling 10 points for handling break/continue outside of a loop.
-
 All projects can be turned in up to 1 week late. Each day the project is late, 3% will be deducted per
 day for up to 21%. After a week, projects will not be accepted.

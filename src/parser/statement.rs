@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression};
 use crate::parser::program::{SymbolTable, find_function, find_variable, LoopInfo, CodeGenState};

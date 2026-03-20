@@ -1,4 +1,4 @@
-use crate::token::Token; // import token enum
+use crate::lexer::token::Token; // import token enum
 
 // This is a lexer that parses numbers and math operations
 pub fn lex(code: &str) -> Result<Vec<Token>, String> {

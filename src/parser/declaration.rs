@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 use crate::parser::program::{SymbolTable, Var, add_local};
 use crate::parser::expression::{parse_expression, Expression};
 

@@ -1282,12 +1282,12 @@ fn opcode(s: &str) -> Result<IRTok, String> {
 
 #[cfg(test)]
 mod ir_tests {
-    use crate::interpreter::*;
+    use crate::interpreter::{interpreter::{IRTok, lex_ir}};
 
    #[test]
     fn ir_lex() {
         {
-            let toks = lex_ir("%add a, b, c\n");
+            let toks = lex_ir("%add a, b, c\n").unwrap();
             assert!(toks.len() == 6);
             assert!(matches!(toks[0], IRTok::Add));
             assert!(matches!(toks[1], IRTok::Var(_)));
@@ -1298,7 +1298,7 @@ mod ir_tests {
         }
 
         {
-            let toks = lex_ir("%func main,,,\n");
+            let toks = lex_ir("%func main,,,\n").unwrap();
             assert!(toks.len() == 5);
             assert!(matches!(toks[0], IRTok::Func));
             assert!(matches!(toks[1], IRTok::Var(_)));
@@ -1308,7 +1308,7 @@ mod ir_tests {
         }
 
         {
-            let toks = lex_ir("%func,main,,,\n");
+            let toks = lex_ir("%func,main,,,\n").unwrap();
             assert!(toks.len() == 6);
             assert!(matches!(toks[0], IRTok::Func));
             assert!(matches!(toks[1], IRTok::Comma));
@@ -1319,7 +1319,7 @@ mod ir_tests {
         }
 
         {
-            let toks = lex_ir("%mov [arr+0], 100\n");
+            let toks = lex_ir("%mov [arr+0], 100\n").unwrap();
             assert!(toks.len() == 8);
             assert!(matches!(toks[0], IRTok::Mov));
             assert!(matches!(toks[1], IRTok::LBrace));

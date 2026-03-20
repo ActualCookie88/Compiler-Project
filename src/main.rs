@@ -11,7 +11,7 @@ use std::env; // used to get the commandline arguments from the commandline.
 use std::fs; // used to interact with the file system
 
 use compiler_project::lexer::lex;
-use compiler_project::parser::parse_program;
+use compiler_project::parser::program::parse_program;
 
 mod interpreter;
 
@@ -88,9 +88,8 @@ fn main() {
 // Rust will then run all the functions annotated with the "#[test]" keyword.
 #[cfg(test)]
 mod tests {
-    use crate::token::Token;
-    use crate::lexer::lex;
-    use crate::parser::parse_statement;
+    use compiler_project::lexer::token::Token;
+    use compiler_project::lexer::lex;
 
     #[test]
     fn lexer_test() {
@@ -168,18 +167,65 @@ mod tests {
 
     #[test]
     fn parse_test() {
+        use compiler_project::parser::program::parse_program;
+        use compiler_project::lexer::lex;
 
-        // test that valid statements are correct.
-        let tokens = lex("a = 1 + 2;").unwrap();
-        parse_statement(&tokens, &mut 0).unwrap();
+        // Valid program
+        let code = "
+            func main() {
+                int a;
+                int b;
+                a = 1 + 2;
+                b = a * 3;
+            }
+        ";
 
-        let tokens = lex("b = 1 / 2;").unwrap();
-        parse_statement(&tokens, &mut 0).unwrap();
+        let tokens = lex(code).unwrap();
+        let mut index = 0;
 
+        let result = parse_program(&tokens, &mut index);
+        assert!(result.is_ok());
 
-        // test errors. missing semicolon
-        let tokens = lex("b = 1 / 2").unwrap();
-        assert!(matches!(parse_statement(&tokens, &mut 0), Err(_)));
+        // Program with if/while
+        let code = "
+            func main() {
+                int a;
+                a = 5;
+                if a > 0 {
+                    a = a - 1;
+                }
+            }
+        ";
+
+        let tokens = lex(code).unwrap();
+        let mut index = 0;
+
+        assert!(parse_program(&tokens, &mut index).is_ok());
+
+        // Missing semicolon, should fail
+        let code = "
+            func main() {
+                int a;
+                a = 5
+            }
+        ";
+
+        let tokens = lex(code).unwrap();
+        let mut index = 0;
+
+        assert!(parse_program(&tokens, &mut index).is_err());
+
+        // No main function, should fail (semantic check)
+        let code = "
+            func foo() {
+                int a;
+            }
+        ";
+
+        let tokens = lex(code).unwrap();
+        let mut index = 0;
+
+        assert!(parse_program(&tokens, &mut index).is_err());
 
     }
 }

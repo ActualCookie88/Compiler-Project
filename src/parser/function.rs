@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 use crate::parser::statement::*;
 use crate::parser::program::{SymbolTable, CodeGenState};
 

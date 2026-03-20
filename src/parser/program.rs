@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 use crate::parser::function::parse_function;
 
 // testing if push works comment

@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::lexer::token::Token;
 use crate::parser::program::{ find_function, find_variable, SymbolTable};
 use crate::parser::statement::create_temp;
 

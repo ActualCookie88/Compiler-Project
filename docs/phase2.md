@@ -1,18 +1,36 @@
-# Phase 2: Building A Parser in Rust
+# Phase 2: Parser (Syntax Analysis)
 
-### Introduction
+## Overview
+In this phase, we implement a **parser** for the Teh Tarik programming language.
 
-Now that the lexer has been built, we will now build the parser. A parser takes the sequence of tokens created by the lexer, and a creates structural representation of the input while checking for correct syntax. If the lexer is the component of the compiler that identifies the “words” and “punctuation” of a programming language, the parser is the the component of the compiler that identifiers the “sentences” and “paragraphs” of the programming language.
+A parser takes the sequence of tokens created by the lexer and creates a structural representation of the program while checking for correct syntax.
 
-The job of the parser is to identify which sequence of tokens represent while loops, if statements, function headers, the function body, etc. If the parser finds a misplaced sequence of tokens, the parser should notify the programming language user of the misplaced tokens.
+If the lexer identifies the “words” and “punctuation” of the language, the parser identifies the “sentences” and overall structure (functions, loops, conditionals, etc.).
 
-In Phase 2, we will be creating a parser. A parser takes a sequence of tokens, and determines what the sequence of tokens represents. For example, a sequence of tokens in order: identifier, equals sign, number (e.g. “variable = 0”) will be recognized as a statement by the parser. The output of the parser will be a print out of the production rules of the parser.
+## Objectives
+- Validate program syntax
+- Identify program structures (functions, statements, expressions)
+- Detect and report syntax errors
+- Prepare for code generation (Phase 3)
 
-### Parser Grammer
+## Parser Grammer
 
-A parser is a program that parses a context free grammar. You can find the proper grammar of the Teh Tarik Programming Lanuage [here](https://cs.ucr.edu/~dtan004/CS152_Parsing.pdf)
+A parser follows a **context-free grammar (CFG)**. You can find the proper grammar of the Teh Tarik Programming Lanuage [here](https://cs.ucr.edu/~dtan004/CS152_Parsing.pdf)
 
-### Building a Parser
+## What is a Parser?
+
+A parser determines what a sequence of tokens represents. For example:
+```bash
+identifier = number;
+```
+This sequence would be recognized as an **assignment statement**.
+
+The parser ensures that:
+- Tokens appear in the correct order
+- Required tokens exist (e.g., semicolons, parentheses)
+- Structures are valid
+
+## Building a Parser
 
 We will be building a simple top down recursive descent parser without backtracking. Let's start with a simple declaration statement `int a;`. We can parse a simple declaration statement with the following pseudocode:
 
@@ -36,7 +54,7 @@ parse_declaration_statement(tokens: Array<Token>) -> Result(value,Error) {
 
 A simple declaration statement is a sequence of an `integer keyword`, followed by an `identifier`, followed by a `semicolon`. This simple pseudo code checks that the `tokens` has the specificed sequence.
 
-### Branching Parser Behavior
+## Branching Parser Behavior
 
 Programming Language Grammars can have branching behavior that allows for expressive power. For example, there are multiple possibilities `int a;` , `int a = 0;`, or `int a = b;`. Here is some pseudocode to parse that grammar:
 
@@ -79,8 +97,7 @@ parse_declaration_statement(tokens: Array<Token>) -> Result(value,Error) {
 
 **In Phase 2, when you call a function when doing top-down recursive descent parsing, make sure to propagate the error back up the calling stack so that the error can be caught correctly.**
 
-
-### matches!() statement
+## matches!() statement
 
 [matches macro](https://doc.rust-lang.org/std/macro.matches.html)
 
@@ -96,75 +113,11 @@ if matches!(token, Token::Func) {
 }
 ```
 
-### Lifetimes (Optional. Not needed for this assignment)
+## Lifetimes (Optional. Not needed for this assignment)
 
 [Lifetimes Documentation](https://doc.rust-lang.org/rust-by-example/scope/lifetime.html)
 
-A lifetime is a construct the Rust borrow checker uses to ensure all reference borrows
-are valid. A variable lifetime begins when it is created and ends when it is destroyed.
-A lifetime annotates a program telling the programmer that a reference must live as long
-as the original object itself. A reference cannot refer to invalid objects that no longer exists,
-and lifetime annotations ensure that there are no dangling references.
-
-Consider a function `longest_string` which returns a reference to `longest_string`. The lifetime
-annotations are required here to ensure that return value reference lasts as long as `a` and `b`.
-If the return value refence does not last as long as `a` and `b`, this will result in a compiler
-error. Lifetime annotations is how Rust tracks reference times to make sure a program is correct.
-
-```
-fn longest_string<'a>(a: &'a str, b: &'a str) -> &'a str {
-  if a.len() > b.len() {
-    a
-  } else {
-    b
-  }
-}
-```
-
-We will be using lifetimes in this project for getting a valid reference to the list of tokens
-and using the borrow checker to verify that a lifetime remains valid. Please note that there are two
-sets of the same function: a function that returns a `Result` and another one which returns `Option`.
-This is because there are situations where returning nothing is not an error.
-
-```
-fn peek<'a>(tokens: &'a Vec<Token>, index: usize) -> Option<&'a Token> {
-    if index < tokens.len() {
-        return Some(&tokens[index])
-    } else {
-        return None
-    }
-}
-
-fn peek_result<'a>(tokens: &'a Vec<Token>, index: usize) -> Result<&'a Token, String> {
-    if index < tokens.len() {
-        return Ok(&tokens[index])
-    } else {
-        return Err(String::from("expected a token, but got nothing"))
-    }
-}
-
-fn next<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> Option<&'a Token> {
-    if *index < tokens.len() {
-        let ret = *index;
-        *index += 1;
-        return Some(&tokens[ret])
-    } else {
-        return None
-    }
-}
-
-fn next_result<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> Result<&'a Token, String> {
-    if *index < tokens.len() {
-        let ret = *index;
-        *index += 1;
-        return Ok(&tokens[ret])
-    } else {
-        return Err(String::from("expected a token, but got nothing"))
-    }
-}
-```
-
-### ? Operator
+## ? Operator
 
 Documentation: [? Operator](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html#where-the--operator-can-be-used)
 
@@ -195,7 +148,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String>
 ```
 This only works when the Result Error return values match.
 
-### Building a Top Down Parser
+## Building a Top Down Parser
 
 Start by creating a function called `parse_program`. It will take in a list of tokens and index marking where the parser is.
 It will return a return a `Result`, where `Result` can either be `Err` or it will be fine.
@@ -275,43 +228,21 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
 Writing `parse_statement` follows a similar pattern to `parse_function` and `parse_program`. You can
 modify the `parse_expression` example to make it into a statement.
 
-### Submission
-A correct and complete parser should be able to parse all the example programs correctly, transforming 
-the string into a list of tokens. At the end of lexing, print out the tokens using a for loop. An 
-example of this can be found in “phase2/src/main.rs”.
+## Requirements
 
-A parser must have the following functionality:
-* It must detect correct grammars correctly
-* Reject incorrect grammars
+The parser must:
+- Accept valid grammar
+- Reject invalid grammar
+- Detect missing tokens
+- Ensure balanced structures
 
-Error messages need to be coherent and useful for users of the programming language. Examples of
-good error messages can be something like: “Error: missing ‘;’ semicolon at the end of the 
-statement.” Or “Error: missing ‘)’ right parenthesis.”
+## Test Cases
 
-The parser should be able to detect the grammar correctly. If a given language input is missing either left or right parenthesis, it is incorrect. A valid language input must have balanced curly braces, and inputs with imbalanced curly brace must be rejected.
-
-### Rubric
-
-Total Points: 100 points total
-
-Demo/Group Participation 10 points
-
-Proper Output for Example Test Cases 80 points (10 points each test case):
-
-* add.tt
-* array.tt
-* break.tt
-* function.tt
-* if.tt
-* loop.tt
-* math.tt
-* nested_loop.tt
-  
-Proper Output for Parser Errors 10 points
-
-All projects can be turned in up to 1 week late. Each day the project is late, 3% will be deducted per
-day for up to 21%. After a week, projects will not be accepted.
-
-
-
-
+- add.tt
+- array.tt
+- break.tt
+- function.tt
+- if.tt
+- loop.tt
+- math.tt
+- nested_loop.tt

@@ -4,6 +4,8 @@ By Luke Matsunaga
 
 Project completed as part of a compilers course. 
 
+Note: Full implementation is kept private to comply with course academic integrity policies.
+
 ## Objectives  
 - Understand the core phases of compiler construction  
 - Implement a working compiler using **Rust**  
@@ -56,27 +58,6 @@ Detailed documentation for each phase can be found below:
 
 - [Phase 4: Complex Code Generation](docs/phase4.md)
 
-## Getting Started  
-
-### Prerequisites  
-- Install Rust: https://www.rust-lang.org/tools/install  
-- Cargo (comes with Rust)
-
-### Build the Project  
-```bash
-cargo build
-```
-
-### Run the Compiler 
-```bash
-cd src/
-cargo run -- <examples_dir>/<.tt file>
-```
-Example command:
-```bash
-cargo run -- examples_parser/array.tt
-```
-
 ## Acknowledgements
 
 This project was completed as part of the course **CS152: Compiler Design** at the University of California, Riverside.
@@ -89,5 +70,5 @@ I would like to thank the course instructor and teaching staff for providing:
 Course materials, including lecture notes and assignment descriptions, were used as references 
 for implementing the lexer, parser, and code generation phases of this project.
 
-All code written for this project is our own, except for any provided starter code or materials 
+All code written for this project is my own, except for any provided starter code or materials 
 explicitly given as part of the assignment.

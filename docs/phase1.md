@@ -1,8 +1,24 @@
-# Phase 1: Building A Lexer in Rust
+# Phase 1: Lexer (Lexical Analysis)
 
-### Introduction
+## Overview
+In this phase, we implement a **lexer** for the Teh Tarik programming language.
 
-A lexer converts text into meaningful tokens belonging to categories defined by a "lexer" program. In a programming language compiler, a lexer partitions text into tokens such as identifiers, operators, grouping symbols, and data types.
+A lexer converts raw source code into a sequence of **tokens**, which are meaningful units such as:
+- Identifiers
+- Keywords
+- Operators
+- Symbols
+- Numbers
+
+This token stream will later be used by the parser (Phase 2).
+
+## Objectives
+- Convert source code into tokens
+- Handle keywords, identifiers, and numbers
+- Remove comments from input
+- Detect and report lexical errors
+
+## What is a Lexer?
 
 For example, if we have a statement:
 ```
@@ -47,19 +63,25 @@ fn main() {
 The lexer takes as input a piece of code represented as a string, and outputs a list of tokens based on the input. If the lexer detects an invalid token, then the 
 lexer spits out an error, and the compiler should halt. If there is an error detected, the compiler should inform the user about what is wrong.
 
-The lexer must meet the following functionality:
-- The lexer should have correct rules for detecting valid/invalid identifiers based on the language 
-specification
-- The lexer should detect and remove comments properly (e.g. `#This is a comment` should parse as 
-one token and then removed from the list of tokens)
-- The lexer should detect and report proper error messages for invalid identifiers and unrecognized 
-symbols (e.g. invalid identifier tokens such as `2a` is an error)
-The lexer is allowed to halt at the first error.
-Please take note that a lexer does not need to check for errors such as misplaced semicolons, balanced parenthesis, or balanced curly brace. Handling those error cases is up to the parser in Phase 2.
-Comments should not be part of the output list of tokens.
+## Requirements
 
+Your lexer must:
 
-### Table of Tokens
+- Correctly identify all valid tokens  
+- Distinguish identifiers from keywords  
+- Remove comments (`# ...`)  
+- Detect invalid tokens (e.g., `2a`)  
+- Stop execution on first error  
+
+### Important
+The lexer does NOT check:
+- Syntax correctness  
+- Balanced parentheses/braces  
+- Missing semicolons  
+
+These are handled in Phase 2 (Parser).
+
+## Table of Tokens
 
 For your lexer, this is the complete list of tokens you need to identify for Phase 1.
 
@@ -99,25 +121,30 @@ For your lexer, this is the complete list of tokens you need to identify for Pha
 |10311517              | Num          |
 |End                   | Marks the end of list of tokens. |
 
-#### Variable Identifier Names
+## Identifiers
 
-Variables begin with an upper or lower case letters A-Z followed by a sequence of underscores or numbers. Examples include:
+Rules:
+- Must start with a letter (A–Z or a–z)
+- Can contain letters, numbers, and underscores
+
+Examples include:
 ```
 int variable_name;
 int var1;
 int october_31_1517;
 ```
 
-#### Comments
+## Comments
 
-Comments can be single line comments starting with `#`. For example:
+- Single-line comments start with `#`
+- Comments should be ignored completely
 
+For example:
 ```
 int x; #This is a variable declaration.
 ```
 
-
-### Opening and read the entire file
+## Opening and reading the entire file
 
 Code to open and read the entire file. This is used to get the all the high level programming language code
 from the file.
@@ -144,7 +171,7 @@ fn main() {
 }
 ```
 
-### Building a simple lexer
+## Building a simple lexer
 
 Let's build a simple lexer that identifies numbers with multiple digits and 
 the basic operation `+`. The other operations such as `-`, `*`, `/` can be easily figured out by
@@ -225,9 +252,9 @@ fn create_identifier(code: &str) -> Token {
 }
 ```
 
-### Example Output
+## Example Output
 
-#### add.tt
+### add.tt
 
 Given the following `add.tt` program:
 ```
@@ -280,7 +307,7 @@ RightCurly
 End
 ```
 
-#### math.tt
+### math.tt
 
 Given the follow `math.tt` program:
 ```
@@ -428,7 +455,7 @@ RightCurly
 End
 ```
 
-#### array.tt
+### array.tt
 
 Given the following `array.tt` example:
 ```
@@ -526,7 +553,7 @@ RightCurly
 End
 ```
 
-#### function.tt
+### function.tt
 
 Given the following `function.tt`:
 ```
@@ -629,7 +656,7 @@ RightCurly
 End
 ```
 
-#### loop.tt
+### loop.tt
 
 Given the simple loop `loop.tt`:
 ```
@@ -677,7 +704,7 @@ RightCurly
 End
 ```
 
-#### if.tt
+### if.tt
 Given the following `if.tt`:
 ```
 func main() {
@@ -792,7 +819,7 @@ RightCurly
 End
 ```
 
-#### nested_loop.tt
+### nested_loop.tt
 
 Given the following `nested_loop.tt`:
 ```
@@ -865,7 +892,7 @@ RightCurly
 End
 ```
 
-#### break.tt
+### break.tt
 
 Given the following `break.tt`:
 ```
@@ -923,31 +950,4 @@ RightCurly
 RightCurly
 End
 ```
-
-### Submission
-A correct and complete lexer should be able to lex all the example programs correctly, transforming 
-the string into a list of tokens. At the end of lexing, print out the tokens using a for loop. An 
-example of this can be found in “phase1/src/main.rs”.
-
-### Rubric
-
-Total Points: 100 points total
-
-Demo/Group Participation 10 points
-
-Proper Output for Example Test Cases 80 points (10 points each test case):
-
-* add.tt
-* array.tt
-* break.tt
-* function.tt
-* if.tt
-* loop.tt
-* math.tt
-* nested_loop.tt
-  
-Proper Output for Lexical Errors 10 points
-
-All projects can be turned in up to 1 week late. Each day the project is late, 3% will be deducted per
-day for up to 21%. After a week, projects will not be accepted.
 

@@ -1,5 +1,0 @@
-func main() {
-  # Error. Type mismatch. Used 'array' as an integer.
-  int [8] array;
-  array = 8;
-}

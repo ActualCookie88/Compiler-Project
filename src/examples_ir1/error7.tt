@@ -1,4 +1,0 @@
-func main() {
-  # Error. Array of size '0'
-  int [0] array;
-}

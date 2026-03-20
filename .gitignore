@@ -22,3 +22,6 @@ target/
 # Temporary files
 *.tmp
 *.temp
+
+# source code
+src/

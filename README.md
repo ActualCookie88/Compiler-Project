@@ -24,6 +24,8 @@ chmod 777 cs152.sh
 
 ## Table of Contents
 
+[Phase 0: Introduction to Rust](docs/TehTarik.md)
+
 [Phase 0: Language Specification](docs/phase0.md)
 
 [Phase 1: Building a Lexer](docs/phase1.md)

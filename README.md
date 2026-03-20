@@ -24,14 +24,12 @@ chmod 777 cs152.sh
 
 ## Table of Contents
 
-[Phase 0: Introduction to Rust](phase0#introduction-to-the-rust-programming-language)
+[Phase 0: Language Specification](docs/phase0.md)
 
-[Phase 0: Language Specification](phase0/src/README.md)
+[Phase 1: Building a Lexer](docs/phase1.md)
 
-[Phase 1: Building a Lexer](phase1)
+[Phase 2: Building a Parser](docs/phase2.md)
 
-[Phase 2: Building a Parser](phase2)
+[Phase 3: Simple Code Generation](docs/phase3.md)
 
-[Phase 3: Simple Code Generation](phase3)
-
-[Phase 4: Complex Code Generation](phase4)
+[Phase 4: Complex Code Generation](docs/phase4.md)

@@ -11,7 +11,7 @@ pub fn parse_declaration_statement(
 ) -> Result<String, String> {
     // int
     match tokens[*index] {
-        Token::Int => {*index += 1;}
+        Token::Int => *index += 1,
         _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
     }
 

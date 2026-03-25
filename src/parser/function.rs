@@ -96,7 +96,10 @@ pub fn parse_function(
 
 // Parse a single parameter of the form 'int <name>'.
 // Returns '(param_name, ir_code)'.
-pub fn parse_parameter(tokens: &[Token], index: &mut usize) -> Result<(String, String), String> {
+pub fn parse_parameter(
+    tokens: &[Token],
+    index: &mut usize
+) -> Result<(String, String), String> {
     // int
     let param_type = match tokens[*index] {
         Token::Int => {

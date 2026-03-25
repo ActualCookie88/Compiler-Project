@@ -1,0 +1,19 @@
+func add(int a, int b) {
+    return a + b;
+}
+
+func mul(int a, int b) {
+     return a * b;
+}
+
+func main() {
+    int a;
+    int b;
+    int c;
+    a = 10;
+    b = 2;
+    c = add(a, b);
+    print(c);
+    c = mul(c, a + b);
+    print(c);
+}

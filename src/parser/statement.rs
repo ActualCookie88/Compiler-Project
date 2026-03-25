@@ -496,7 +496,7 @@ fn parse_assignment_statement(
             ir_code.push_str(&rhs_expr.code);
             ir_code.push_str(&rhs_idx.code);
 
-            let tmp = create_temp();;
+            let tmp = create_temp();
             ir_code.push_str(&format!("%int {}\n", tmp));
             ir_code.push_str(&format!("%mov {}, {}\n", tmp, rhs_idx.name));
 

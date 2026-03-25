@@ -1,5 +1,5 @@
 use crate::lexer::token::Token;
-use crate::parser::program::{SymbolTable, Variable, add_local};
+use crate::parser::program::{add_local, SymbolTable, Variable, VarKind};
 use crate::parser::expression::{parse_expression, Expression};
 
 // int a;   int [8] a;
@@ -8,34 +8,35 @@ pub fn parse_declaration_statement(
     index: &mut usize,
     table: &mut SymbolTable,
     current_func: &str
-    ) -> Result<String, String> {
+) -> Result<String, String> {
     // int
     match tokens[*index] {
         Token::Int => {*index += 1;}
         _ => {return Err(String::from("Declaration statements must begin with 'int' keyword"));}
     }
 
-    let mut array_size: Option<i32> = None;
-    
-    // [number]
-    if matches!(tokens[*index], Token::LeftBracket) {
+    // optional [size] for array declarations
+    let array_size: Option<usize> = if matches!(tokens[*index], Token::LeftBracket) {
         *index += 1;
 
         // number / array size
-        match tokens[*index] {
+        let size = match tokens[*index] {
             Token::Num(num) => {
                 *index += 1;
-                array_size = Some(num);
+                num as usize
             }
             _ => return Err(String::from("Expected number within '[]")),
-        }
+        };
         
-        // ]
+        // }
         match tokens[*index] {
             Token::RightBracket => *index += 1,
             _ => return Err(String::from("Expected ']' after array size")),
         }
-    }
+        Some(size)
+    } else {
+        None
+    };
 
     // identifier
     let var_name = match &tokens[*index] {
@@ -46,55 +47,48 @@ pub fn parse_declaration_statement(
         _ => return Err(String::from("Declarations must have an identifier")),
     };
 
-    // check if declaration is array or scalar, and add to symbol table accordingly
+    // add to symbol table and generate IR
     let mut ir_code = String::new();
+
     match array_size {
+        // array declaration: int [n] a;
         Some(size) => {
-            if size <= 0 { // array size semantic check
-                return Err(String::from("Array size must be greater than 0"));
-            }
-
-            add_local(table, current_func, Var {
+            add_local(table, current_func, Variable {
                 name: var_name.clone(),
-                is_array: true,
-                size,
+                kind: VarKind::Array(size),
             })?;
-
+ 
             match tokens[*index] {
                 Token::Semicolon => *index += 1,
-                _ => return Err("Declaration must end with ';'".to_string()),
+                _ => return Err(String::from("Declaration must end with ';'")),
             }
-
-            Ok(format!("%int[] {}, {}\n", var_name, size))
+ 
+            ir_code.push_str(&format!("%int[] {}, {}\n", var_name, size));
         }
 
-        //scalar
+        // scalar declaration: int a;  or  int a = expr;
         None => {
             add_local(table, current_func, Variable {
                 name: var_name.clone(),
-                is_array: false,
-                size: 0,
+                kind: VarKind::Scalar,
             })?;
-
+ 
             ir_code.push_str(&format!("%int {}\n", var_name));
-            
+ 
+            // optional initializer
             if matches!(tokens[*index], Token::Assign) {
                 *index += 1;
-                let rhs_expr: Expression = parse_expression(tokens, index, table, current_func)?;
-                
-                // append all IR code for the expression
-                ir_code.push_str(&rhs_expr.code);
-                
-                // move the result into the variable
-                ir_code.push_str(&format!("%mov {}, {}\n", var_name, rhs_expr.name));
+                let rhs: Expression = parse_expression(tokens, index, table, current_func)?;
+                ir_code.push_str(&rhs.code);
+                ir_code.push_str(&format!("%mov {}, {}\n", var_name, rhs.name));
             }
-
+            
+            // ;
             match tokens[*index] {
                 Token::Semicolon => *index += 1,
-                _ => return Err("Declaration must end with ';'".to_string()),
+                _ => return Err(String::from("Declaration must end with ';'")),
             }
-
-            Ok(ir_code)
         }
     }
+    Ok(ir_code)
 }

@@ -46,17 +46,17 @@ This programming language is named after Teh Tarik, which is the national drink 
 
 Detailed documentation for each phase can be found below:
 
-- [Phase 0: Introduction to Rust](docs/TehTarik.md)
+- [Phase 0: Introduction to Rust](phase_documentation/TehTarik.md)
 
-- [Phase 0: Language Specification](docs/phase0.md)
+- [Phase 0: Language Specification](phase_documentation/phase0.md)
 
-- [Phase 1: Building a Lexer](docs/phase1.md)
+- [Phase 1: Building a Lexer](phase_documentation/phase1.md)
 
-- [Phase 2: Building a Parser](docs/phase2.md)
+- [Phase 2: Building a Parser](phase_documentation/phase2.md)
 
-- [Phase 3: Simple Code Generation](docs/phase3.md)
+- [Phase 3: Simple Code Generation](phase_documentation/phase3.md)
 
-- [Phase 4: Complex Code Generation](docs/phase4.md)
+- [Phase 4: Complex Code Generation](phase_documentation/phase4.md)
 
 ## Acknowledgements
 

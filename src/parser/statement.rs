@@ -1,7 +1,7 @@
 use crate::lexer::token::Token;
 use crate::parser::declaration::parse_declaration_statement;
 use crate::parser::expression::{parse_expression, parse_boolean_expression};
-use crate::parser::program::{SymbolTable, find_function, find_variable, LoopInfo, CodeGenState};
+use crate::parser::program::{find_function, find_variable, CodeGenState, LoopInfo, SymbolTable, VarKind};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -15,12 +15,11 @@ pub fn create_temp() -> String {
 
 fn create_if_label() -> (String, String, String) {
     let id = IF_COUNTER.fetch_add(1, Ordering::SeqCst);
-
-    let if_true = format!("iftrue{}", id);
-    let else_label = format!("else{}", id);
-    let end_if = format!("endif{}", id);
-
-    (if_true, else_label, end_if)
+    (
+        format!("iftrue{}", id),
+        format!("else{}", id),
+        format!("endif{}", id),
+    )
 }
 
 // parsing a statement such as:
@@ -31,12 +30,12 @@ fn create_if_label() -> (String, String, String) {
 // read(a)
 // returns epsilon if '}'
 pub fn parse_statement(
-        tokens: &[Token], 
-        index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str ,
-        state: &mut CodeGenState
-    ) -> Result<String, String> {
+    tokens: &[Token], 
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str ,
+    state: &mut CodeGenState
+) -> Result<String, String> {
     match &tokens[*index] {
         Token::Int => parse_declaration_statement(tokens, index, table, current_func),
         Token::Return => parse_return_statement(tokens, index, table, current_func),
@@ -47,7 +46,8 @@ pub fn parse_statement(
         Token::Break => parse_break_statement(tokens, index, state),
         Token::Continue => parse_continue_statement(tokens, index, state),
         Token::Ident(_) => {
-            if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) { // function call
+            // peek ahead: if next token is '(' this is a function call statement
+            if *index + 1 < tokens.len() && matches!(tokens[*index + 1], Token::LeftParen) {
                 let expr = parse_expression(tokens, index, table, current_func)?;
                 match tokens[*index] {
                     Token::Semicolon => {
@@ -56,7 +56,7 @@ pub fn parse_statement(
                     }
                     _ => Err(String::from("Function call statement must end with ';'")),
                 }
-            } else { // assignment
+            } else {
                 parse_assignment_statement(tokens, index, table, current_func)
             }
         },
@@ -64,8 +64,18 @@ pub fn parse_statement(
     }
 }
 
-// break
-fn parse_break_statement(tokens: &[Token], index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
+/* ////////////////////////////////////////////////////////////////////
+
+Control Flow
+
+//////////////////////////////////////////////////////////////////// */
+
+fn parse_break_statement(
+    tokens: &[Token],
+    index: &mut usize,
+    state: &mut CodeGenState
+) -> Result<String, String> {
+    // break
     match tokens[*index] {
         Token::Break =>  *index += 1,
         _ => return Err(String::from("Expected 'break'")),
@@ -77,13 +87,22 @@ fn parse_break_statement(tokens: &[Token], index: &mut usize, state: &mut CodeGe
         _ => return Err(String::from("Break statement must end with a semicolon")),
     }
 
-    let loop_end = state.loop_stack.last().ok_or("Used 'break' outside of a loop")?.end.clone();
+    let loop_end = state
+        .loop_stack
+        .last()
+        .ok_or("Used 'break' outside of a loop")?
+        .end
+        .clone();
 
     Ok(format!("%jmp {}\n", loop_end))
 }
 
-// continue
-fn parse_continue_statement(tokens: &[Token], index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
+fn parse_continue_statement(
+    tokens: &[Token],
+    index: &mut usize,
+    state: &mut CodeGenState
+) -> Result<String, String> {
+    // continue
     match tokens[*index] {
         Token::Continue =>  *index += 1,
         _ => return Err(String::from("Expected 'continue'")),
@@ -92,29 +111,34 @@ fn parse_continue_statement(tokens: &[Token], index: &mut usize, state: &mut Cod
     // ;
     match tokens[*index] {
         Token::Semicolon =>  *index += 1,
-        _ => return Err(String::from("Break statement must end with a semicolon")),
+        _ => return Err(String::from("Continue statement must end with a semicolon")),
     }
 
-    let loop_start = state.loop_stack.last().ok_or("Used 'continue' outside of a loop")?.begin.clone();
+    let loop_start = state
+        .loop_stack
+        .last()
+        .ok_or("Used 'continue' outside of a loop")?
+        .begin
+        .clone();
 
     Ok(format!("%jmp {}\n", loop_start))
 }
 
-// while loops
 fn parse_while_statement(
-        tokens: &[Token],
-        index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str,
-        state: &mut CodeGenState
-    ) -> Result<String, String>{
-    
+    tokens: &[Token],
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str,
+    state: &mut CodeGenState
+) -> Result<String, String>{
+    // while
     match tokens[*index] {
         Token::While => *index += 1,
-        _ => return Err("Expected 'while'".to_string()),
+        _ => return Err(String::from("Expected 'while'")),
     }
 
-    let loop_id = state.label_counter; // unique loop id for generating labels
+    // unique loop id for generating labels
+    let loop_id = state.label_counter; 
     state.label_counter += 1;
 
     let loop_begin = format!(":loopbegin{}", loop_id);
@@ -130,23 +154,26 @@ fn parse_while_statement(
     code.push_str(&condition.code);
     code.push_str(&format!("%branch_ifn {}, {}\n", condition.name, loop_end));
     
+    // {
     match tokens[*index] {
         Token::LeftCurly => *index += 1,
-        _ => return Err("Expected '{' after while condition".to_string()),
+        _ => return Err(String::from("Expected '{' after while condition")),
     }
 
+    // parse statements inside 'while' body
     while !matches!(tokens[*index], Token::RightCurly) {
         let before = *index;
         code.push_str(&parse_statement(tokens, index, table, current_func, state)?);
 
         if *index == before {
-            return Err("Parser made no progress".to_string());
+            return Err(String::from("Parser made no progress"));
         }
     }
 
+    // }
     match tokens[*index] {
         Token::RightCurly => *index += 1,
-        _ => return Err("Expected '}' to close while block".to_string()),
+        _ => return Err(String::from("Expected '}' to close while block")),
     }
 
     code.push_str(&format!("%jmp {}\n", loop_begin));
@@ -155,27 +182,27 @@ fn parse_while_statement(
     // pop loop info
     state.loop_stack.pop();
 
-    return Ok(code)
+    Ok(code)
 }
 
 fn parse_if_statement(
-        tokens: &[Token],
-        index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str,
-        state: &mut CodeGenState
-    ) -> Result<String, String>{
-	// if
+    tokens: &[Token],
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str,
+    state: &mut CodeGenState
+) -> Result<String, String>{
+    // if
 	match tokens[*index] {
 	    Token::If => *index += 1,
 	    _ => return Err(String::from("Expected 'if' keyword")),
 	}
+
     let mut ir_code = String::new();
     let mut if_body = String::new();
     let mut else_body = String::new();
 
     let condition = parse_boolean_expression(tokens, index, table, current_func)?;
-
     ir_code.push_str(&condition.code);
 
     // labels
@@ -190,13 +217,13 @@ fn parse_if_statement(
         _ => return Err(String::from("Expected '{'")),
 	}
 
-	// parse body until }
+	// parse statements inside 'if' body
 	while !matches!(tokens[*index], Token::RightCurly) {
 		let before = *index;
 		if_body.push_str(&parse_statement(tokens, index, table, current_func, state)?);
 
 		if *index == before {
-			return Err("Parser made no progress".to_string());
+			return Err(String::from("Parser made no progress"));
 		}
 	}
 
@@ -206,25 +233,26 @@ fn parse_if_statement(
 		_ => return Err(String::from("Expected '}'")),
 	}
 
-    // else statement
-    let mut has_else = false;
-	if matches!(tokens[*index], Token::Else) {
-        has_else = true;
+    // (optional) else body
+    let has_else = matches!(tokens[*index], Token::Else);
+
+	if has_else {
         ir_code.push_str(&format!("%jmp :{}\n", else_label));
 		*index += 1;
+        
 		// {
 		match tokens[*index] {
 			Token::LeftCurly =>  *index += 1,
 			_ => return Err(String::from("Expected '{'")),
 		}
 
-		// parse body until }
+		// // parse statements inside 'else' body
 		while !matches!(tokens[*index], Token::RightCurly) {
 			let before = *index;
 			else_body.push_str(&parse_statement(tokens, index, table, current_func, state)?);
         
 			if *index == before {
-				return Err("Parser made no progress".to_string());
+				return Err(String::from("Parser made no progress"));
 			}
 		}
 
@@ -255,12 +283,19 @@ fn parse_if_statement(
     Ok(ir_code)
 }
 
+/* ////////////////////////////////////////////////////////////////////
+
+Simple Statements
+
+//////////////////////////////////////////////////////////////////// */
+
 fn parse_return_statement(
-        tokens: &[Token],
-        index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str
-    ) -> Result<String, String> {
+    tokens: &[Token],
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str
+) -> Result<String, String> {
+    // return
     match tokens[*index] {
         Token::Return => *index += 1,
         _ => return Err(String::from("Return statements must begin with a 'return' keyword")),
@@ -268,20 +303,22 @@ fn parse_return_statement(
 
     let expr = parse_expression(tokens, index, table, current_func)?;
 
+    // ;
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Statement must end with a semicolon")),
     }
 
-    return Ok(format!("{}%ret {}\n", expr.code, expr.name))
+    Ok(format!("{}%ret {}\n", expr.code, expr.name))
 }
 
 fn parse_print_statement(
-        tokens: &[Token],
-        index: &mut usize,
-        table: &mut SymbolTable,
-        current_func: &str
-    ) -> Result<String, String> {
+    tokens: &[Token],
+    index: &mut usize,
+    table: &mut SymbolTable,
+    current_func: &str
+) -> Result<String, String> {
+    // print
     match tokens[*index] {
         Token::Print=> *index += 1,
         _ => return Err(String::from("Print statements must begin with 'print' keyword")),
@@ -289,19 +326,20 @@ fn parse_print_statement(
 
     let expr = parse_expression(tokens, index, table, current_func)?;
 
+    // ;
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Statements must end with a semicolon")),
     }
 
-    let ir_code = format!("{}%out {}\n", expr.code, expr.name);
-    return Ok(ir_code)
+    Ok(format!("{}%out {}\n", expr.code, expr.name))
 }
 
 fn parse_read_statement(
-        tokens: &[Token],
-        index: &mut usize,
-    ) -> Result<String, String>{
+    tokens: &[Token],
+    index: &mut usize,
+) -> Result<String, String>{
+    // read
     match tokens[*index] {
         Token::Read => *index += 1,
         _ => return Err(String::from("Read statements must begin with a 'read' keyword")),
@@ -323,9 +361,16 @@ fn parse_read_statement(
     Ok(format!("%input {}\n", name))
 }
 
-/// 1. dest = src1        = %mov dest, src1
-/// 2. array[i] = src1    = %mov [array + i], src1
-/// 3. dest = array[i]    = %mov dest, [array + i]
+/* ////////////////////////////////////////////////////////////////////
+
+Assignment
+
+//////////////////////////////////////////////////////////////////// */
+
+// Handles three assignment forms:
+// 1. dest = src1        = %mov dest, src1
+// 2. array[i] = src1    = %mov [array + i], src1
+// 3. dest = array[i]    = %mov dest, [array + i]
 fn parse_assignment_statement(
     tokens: &[Token],
     index: &mut usize,
@@ -350,35 +395,37 @@ fn parse_assignment_statement(
     let lhs_var = find_variable(&func, &ident)
         .ok_or_else(|| format!("Variable '{}' not declared in function '{}'", ident, current_func))?;
     
-    // Check for array indexing on lhs: [expression]
+    // Check for array indexing on lhs: array[expr]
     let lhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
-        // lhs must be an array
-        if !lhs_var.is_array {
+        // SEMANTIC CHECK: only arrays can be indexed
+        if !matches!(lhs_var.kind, VarKind::Array(_)) {
             return Err(format!(
-                "Type mismatch: scalar integer variable '{}' used as an array",
+                "Type mismatch: scalar variable '{}' used as an array",
                 ident
             ));
         }
         
         *index += 1;
         let index_expr = parse_expression(tokens, index, table, current_func)?;
+
+        // }
         match tokens[*index] {
             Token::RightBracket => *index += 1,
             _ => return Err(String::from("Expected ']' after array index")),
         }
         Some(index_expr)
     } else {
-        // semantic check: if no indexing on lhs, lhs must be scalar
-        if lhs_var.is_array {
+        // SEMANTIC CHECK: arrays cannot be used as scalars
+        if matches!(lhs_var.kind, VarKind::Array(_)) {
             return Err(format!(
-                "Type mismatch: array integer variable '{}' used as a scalar",
+                "Type mismatch: array variable '{}' used as a scalar",
                 ident
             ));
-        }        
+        }
         None
     };
 
-    // = operator
+    // =
     match tokens[*index] {
         Token::Assign => *index += 1,
         _ => return Err(String::from("Missing the '=' operator")),
@@ -387,34 +434,35 @@ fn parse_assignment_statement(
     // right hand side of expression
     let rhs_expr = parse_expression(tokens, index, table, current_func)?;
 
-    // Check for array indexing on rhs: [expression]
+    // Check for array indexing on rhs: base[expr]
     let rhs_index_expr = if matches!(tokens[*index], Token::LeftBracket) {
         // if "a = b[i];" rhs_expr.name should be the base variable name
         let rhs_var = find_variable(&func, &rhs_expr.name)
             .ok_or_else(|| format!("Variable '{}' used without being declared", rhs_expr.name))?;
     
-        // rhs base must be array
-        if !rhs_var.is_array {
+         // SEMANTIC CHECK: only arrays can be indexed
+        if !matches!(rhs_var.kind, VarKind::Array(_)) {
             return Err(format!(
-                "Type mismatch: scalar integer variable '{}' used as an array",
+                "Type mismatch: scalar variable '{}' used as an array",
                 rhs_expr.name
             ));
         }
         
         *index += 1;
         let index_expr = parse_expression(tokens, index, table, current_func)?;
+
+        // }
         match tokens[*index] {
             Token::RightBracket => *index += 1,
             _ => return Err(String::from("Expected ']' after array index")),
         }
         Some(index_expr)
     } else {
-        // if rhs expression is just a variable name and that variable is an array,
-        // then array is being used like a scalar
+        // SEMANTIC CHECK: arrays cannot be used as scalars on the rhs either
         if let Some(rhs_var) = find_variable(&func, &rhs_expr.name) {
-            if rhs_var.is_array {
+            if matches!(rhs_var.kind, VarKind::Array(_)) {
                 return Err(format!(
-                    "Type mismatch: array integer variable '{}' used as a scalar",
+                    "Type mismatch: array variable '{}' used as a scalar",
                     rhs_expr.name
                 ));
             }
@@ -422,7 +470,7 @@ fn parse_assignment_statement(
         None
     };
 
-    // semicolon ;
+    // ;
     match tokens[*index] {
         Token::Semicolon => *index += 1,
         _ => return Err(String::from("Missing semicolon.")),
@@ -433,31 +481,33 @@ fn parse_assignment_statement(
     // generate code 
     match (lhs_index_expr, rhs_index_expr) { 
         // array write: array[index] = rhs
-        (Some(lhs_expr), None) => {
-            ir_code.push_str(&lhs_expr.code);
+        (Some(lhs_idx), None) => {
+            ir_code.push_str(&lhs_idx.code);
             ir_code.push_str(&rhs_expr.code);
 
-            let lhs_temp = create_temp();
-            ir_code.push_str(&format!("%int {}\n", lhs_temp));
-            ir_code.push_str(&format!("%mov {}, {}\n", lhs_temp, lhs_expr.name));
+            let tmp = create_temp();
+            ir_code.push_str(&format!("%int {}\n", tmp));
+            ir_code.push_str(&format!("%mov {}, {}\n", tmp, lhs_idx.name));
 
-            ir_code.push_str(&format!("%mov [{} + {}], {}\n", ident, lhs_temp, rhs_expr.name));
+            ir_code.push_str(&format!("%mov [{} + {}], {}\n", ident, tmp, rhs_expr.name));
         }
-        // array read: lhs = rhs[index]
-        (None, Some(rhs_index)) => {
+        // array read: lhs = array[index]
+        (None, Some(rhs_idx)) => {
             ir_code.push_str(&rhs_expr.code);
-            ir_code.push_str(&rhs_index.code);
+            ir_code.push_str(&rhs_idx.code);
 
-            let rhs_temp = create_temp();
-            ir_code.push_str(&format!("%int {}\n", rhs_temp));
-            ir_code.push_str(&format!("%mov {}, {}\n", rhs_temp, rhs_index.name));
+            let tmp = create_temp();;
+            ir_code.push_str(&format!("%int {}\n", tmp));
+            ir_code.push_str(&format!("%mov {}, {}\n", tmp, rhs_idx.name));
 
-            ir_code.push_str(&format!("%mov {}, [{} + {}]\n", ident, rhs_expr.name, rhs_temp));
+            ir_code.push_str(&format!("%mov {}, [{} + {}]\n", ident, rhs_expr.name, tmp));
         }
+        // simple scalar assignment
         (None, None) => {
             ir_code.push_str(&rhs_expr.code);
-            ir_code.push_str(&format!("%mov {}, {}\n", ident, rhs_expr.name));  // simple assignment
+            ir_code.push_str(&format!("%mov {}, {}\n", ident, rhs_expr.name));  
         }
+        // edge case for Teh Tarik Language
         (Some(_), Some(_)) => {
             return Err(String::from(
                 "Assignments with array indexing on both sides are not supported"

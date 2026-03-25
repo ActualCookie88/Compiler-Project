@@ -8,7 +8,7 @@ pub struct Expression {
 }
 
 // parsing complex expressions such as: "a + b - (c * d) / (f + g - 8);
-pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+pub fn parse_expression(tokens: &[Token], index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
     let mut expr = parse_multiply_expression(tokens, index, table, current_func)?;
     loop {
         let operation = match tokens[*index] {
@@ -39,7 +39,7 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut Symb
     Ok(expr)
 }
 
-pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+pub fn parse_boolean_expression(tokens: &[Token], index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
     let mut expr = parse_expression(tokens, index, table, current_func)?;
 
     let operation = match tokens[*index] {
@@ -72,7 +72,7 @@ pub fn parse_boolean_expression(tokens: &Vec<Token>, index: &mut usize, table: &
     Ok(expr)
 }
 
-pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+pub fn parse_multiply_expression(tokens: &[Token], index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
     let mut expr = parse_term(tokens, index, table, current_func)?;
 
     loop {
@@ -106,7 +106,7 @@ pub fn parse_multiply_expression(tokens: &Vec<Token>, index: &mut usize, table: 
 }
 
 // a term is either a Number or an Identifier.
-fn parse_term(tokens: &Vec<Token>, index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
+fn parse_term(tokens: &[Token], index: &mut usize, table: &mut SymbolTable, current_func: &str) -> Result<Expression, String> {
     match &tokens[*index] {
         Token::Ident(ident) => {
             *index += 1;

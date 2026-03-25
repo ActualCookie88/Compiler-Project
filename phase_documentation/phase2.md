@@ -130,7 +130,7 @@ for you. This technique can simplify the error handling code in Rust.
 
 For example, if you have two functions `parse_function` and `parse_statement`, you can simplify the match statements using the `?` operator in the following way:
 ```
-fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+fn parse_function(tokens: &[Token], index: &mut usize) -> Result<(), String> {
 
     // 1.) this is the conventional match statement
     match parse_statement(tokens, index) {
@@ -142,7 +142,7 @@ fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> 
     parse_statement(tokens, index)?;
 }
 
-fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+fn parse_statement(tokens: &[Token], index: &mut usize) -> Result<(), String> {
     todo!()
 }
 ```
@@ -155,7 +155,7 @@ It will return a return a `Result`, where `Result` can either be `Err` or it wil
 ```
 // parse programs with multiple functions
 // loop over everything, outputting generated code.
-fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+fn parse_program(tokens: &[Token], index: &mut usize) -> Result<(), String> {
     assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
     while !at_end(tokens, *index) {
       match parse_function(tokens, index) {
@@ -180,7 +180,7 @@ func main() {
 We can write `parse_function` like this:
 
 ```
-fn parse_function(tokens: &Vec<Token>, index: &mut usize) -> Result<(), String> {
+fn parse_function(tokens: &[Token], index: &mut usize) -> Result<(), String> {
     
     match tokens[*index] {
     Token::Func => { *index += 1; }

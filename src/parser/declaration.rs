@@ -4,7 +4,7 @@ use crate::parser::expression::{parse_expression, Expression};
 
 // int a;   int [8] a;
 pub fn parse_declaration_statement(
-    tokens: &Vec<Token>,
+    tokens: &[Token],
     index: &mut usize,
     table: &mut SymbolTable,
     current_func: &str

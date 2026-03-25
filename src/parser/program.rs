@@ -127,7 +127,7 @@ Top-Level Parse Entry Point
 //////////////////////////////////////////////////////////////////// */
 
 // Parse a complete program (one or more function definitions) and return the generated assembly/IR as a single `String`
-pub fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<String, String> {
+pub fn parse_program(tokens: &[Token], index: &mut usize) -> Result<String, String> {
     // Ensure the caller upholds the token-stream invariant.
     assert!(tokens.len() >= 1 && matches!(tokens[tokens.len() - 1], Token::End));
 
@@ -149,7 +149,7 @@ pub fn parse_program(tokens: &Vec<Token>, index: &mut usize) -> Result<String, S
 }
 
 // Helper
-fn at_end(tokens: &Vec<Token>, index: usize) -> bool {
+fn at_end(tokens: &[Token], index: usize) -> bool {
     match tokens[index] {
     Token::End => { true }
     _ => { false }

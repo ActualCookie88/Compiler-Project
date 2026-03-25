@@ -31,7 +31,7 @@ fn create_if_label() -> (String, String, String) {
 // read(a)
 // returns epsilon if '}'
 pub fn parse_statement(
-        tokens: &Vec<Token>, 
+        tokens: &[Token], 
         index: &mut usize,
         table: &mut SymbolTable,
         current_func: &str ,
@@ -65,7 +65,7 @@ pub fn parse_statement(
 }
 
 // break
-fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
+fn parse_break_statement(tokens: &[Token], index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
     match tokens[*index] {
         Token::Break =>  *index += 1,
         _ => return Err(String::from("Expected 'break'")),
@@ -83,7 +83,7 @@ fn parse_break_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut Cod
 }
 
 // continue
-fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
+fn parse_continue_statement(tokens: &[Token], index: &mut usize, state: &mut CodeGenState) -> Result<String, String> {
     match tokens[*index] {
         Token::Continue =>  *index += 1,
         _ => return Err(String::from("Expected 'continue'")),
@@ -102,7 +102,7 @@ fn parse_continue_statement(tokens: &Vec<Token>, index: &mut usize, state: &mut 
 
 // while loops
 fn parse_while_statement(
-        tokens: &Vec<Token>,
+        tokens: &[Token],
         index: &mut usize,
         table: &mut SymbolTable,
         current_func: &str,
@@ -159,7 +159,7 @@ fn parse_while_statement(
 }
 
 fn parse_if_statement(
-        tokens: &Vec<Token>,
+        tokens: &[Token],
         index: &mut usize,
         table: &mut SymbolTable,
         current_func: &str,
@@ -256,7 +256,7 @@ fn parse_if_statement(
 }
 
 fn parse_return_statement(
-        tokens: &Vec<Token>,
+        tokens: &[Token],
         index: &mut usize,
         table: &mut SymbolTable,
         current_func: &str
@@ -277,7 +277,7 @@ fn parse_return_statement(
 }
 
 fn parse_print_statement(
-        tokens: &Vec<Token>,
+        tokens: &[Token],
         index: &mut usize,
         table: &mut SymbolTable,
         current_func: &str
@@ -299,7 +299,7 @@ fn parse_print_statement(
 }
 
 fn parse_read_statement(
-        tokens: &Vec<Token>,
+        tokens: &[Token],
         index: &mut usize,
     ) -> Result<String, String>{
     match tokens[*index] {
@@ -327,7 +327,7 @@ fn parse_read_statement(
 /// 2. array[i] = src1    = %mov [array + i], src1
 /// 3. dest = array[i]    = %mov dest, [array + i]
 fn parse_assignment_statement(
-    tokens: &Vec<Token>,
+    tokens: &[Token],
     index: &mut usize,
     table: &mut SymbolTable,
     current_func: &str

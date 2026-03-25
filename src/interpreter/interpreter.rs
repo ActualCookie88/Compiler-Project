@@ -1282,58 +1282,72 @@ fn opcode(s: &str) -> Result<IRTok, String> {
 
 #[cfg(test)]
 mod ir_tests {
-    use crate::interpreter::{interpreter::{IRTok, lex_ir}};
-
-   #[test]
-    fn ir_lex() {
-        {
-            let toks = lex_ir("%add a, b, c\n").unwrap();
-            assert!(toks.len() == 6);
-            assert!(matches!(toks[0], IRTok::Add));
-            assert!(matches!(toks[1], IRTok::Var(_)));
-            assert!(matches!(toks[2], IRTok::Comma));
-            assert!(matches!(toks[3], IRTok::Var(_)));
-            assert!(matches!(toks[4], IRTok::Comma));
-            assert!(matches!(toks[5], IRTok::Var(_)));
-        }
-
-        {
-            let toks = lex_ir("%func main,,,\n").unwrap();
-            assert!(toks.len() == 5);
-            assert!(matches!(toks[0], IRTok::Func));
-            assert!(matches!(toks[1], IRTok::Var(_)));
-            assert!(matches!(toks[2], IRTok::Comma));
-            assert!(matches!(toks[3], IRTok::Comma));
-            assert!(matches!(toks[4], IRTok::Comma));
-        }
-
-        {
-            let toks = lex_ir("%func,main,,,\n").unwrap();
-            assert!(toks.len() == 6);
-            assert!(matches!(toks[0], IRTok::Func));
-            assert!(matches!(toks[1], IRTok::Comma));
-            assert!(matches!(toks[2], IRTok::Var(_)));
-            assert!(matches!(toks[3], IRTok::Comma));
-            assert!(matches!(toks[4], IRTok::Comma));
-            assert!(matches!(toks[5], IRTok::Comma));
-        }
-
-        {
-            let toks = lex_ir("%mov [arr+0], 100\n").unwrap();
-            assert!(toks.len() == 8);
-            assert!(matches!(toks[0], IRTok::Mov));
-            assert!(matches!(toks[1], IRTok::LBrace));
-            assert!(matches!(toks[2], IRTok::Var(_)));
-            assert!(matches!(toks[3], IRTok::Plus));
-            assert!(matches!(toks[4], IRTok::Num(0)));
-            assert!(matches!(toks[5], IRTok::RBrace));
-            assert!(matches!(toks[6], IRTok::Comma));
-            assert!(matches!(toks[7], IRTok::Num(100)));
-        }
+    use crate::interpreter::interpreter::{IRTok, lex_ir};
+ 
+    #[test]
+    fn ir_lex_add() {
+        // %add a, b, c\n  →  Add, Var(a), Comma, Var(b), Comma, Var(c), EndInstr, End
+        let toks = lex_ir("%add a, b, c\n").unwrap();
+        assert_eq!(toks.len(), 8);
+        assert!(matches!(toks[0], IRTok::Add));
+        assert!(matches!(toks[1], IRTok::Var(_)));
+        assert!(matches!(toks[2], IRTok::Comma));
+        assert!(matches!(toks[3], IRTok::Var(_)));
+        assert!(matches!(toks[4], IRTok::Comma));
+        assert!(matches!(toks[5], IRTok::Var(_)));
+        assert!(matches!(toks[6], IRTok::EndInstr));
+        assert!(matches!(toks[7], IRTok::End));
+    }
+ 
+    #[test]
+    fn ir_lex_func_with_commas() {
+        // %func main,,,\n  →  Func, Var(main), Comma, Comma, Comma, EndInstr, End
+        let toks = lex_ir("%func main,,,\n").unwrap();
+        assert_eq!(toks.len(), 7);
+        assert!(matches!(toks[0], IRTok::Func));
+        assert!(matches!(toks[1], IRTok::Var(_)));
+        assert!(matches!(toks[2], IRTok::Comma));
+        assert!(matches!(toks[3], IRTok::Comma));
+        assert!(matches!(toks[4], IRTok::Comma));
+        assert!(matches!(toks[5], IRTok::EndInstr));
+        assert!(matches!(toks[6], IRTok::End));
+    }
+ 
+    #[test]
+    fn ir_lex_func_comma_before_name() {
+        // %func,main,,,\n  →  Func, Comma, Var(main), Comma, Comma, Comma, EndInstr, End
+        let toks = lex_ir("%func,main,,,\n").unwrap();
+        assert_eq!(toks.len(), 8);
+        assert!(matches!(toks[0], IRTok::Func));
+        assert!(matches!(toks[1], IRTok::Comma));
+        assert!(matches!(toks[2], IRTok::Var(_)));
+        assert!(matches!(toks[3], IRTok::Comma));
+        assert!(matches!(toks[4], IRTok::Comma));
+        assert!(matches!(toks[5], IRTok::Comma));
+        assert!(matches!(toks[6], IRTok::EndInstr));
+        assert!(matches!(toks[7], IRTok::End));
+    }
+ 
+    #[test]
+    fn ir_lex_mov_array_write() {
+        // %mov [arr+0], 100\n  →  Mov, LBrace, Var(arr), Plus, Num(0), RBrace, Comma, Num(100), EndInstr, End
+        let toks = lex_ir("%mov [arr+0], 100\n").unwrap();
+        assert_eq!(toks.len(), 10);
+        assert!(matches!(toks[0], IRTok::Mov));
+        assert!(matches!(toks[1], IRTok::LBrace));
+        assert!(matches!(toks[2], IRTok::Var(_)));
+        assert!(matches!(toks[3], IRTok::Plus));
+        assert!(matches!(toks[4], IRTok::Num(0)));
+        assert!(matches!(toks[5], IRTok::RBrace));
+        assert!(matches!(toks[6], IRTok::Comma));
+        assert!(matches!(toks[7], IRTok::Num(100)));
+        assert!(matches!(toks[8], IRTok::EndInstr));
+        assert!(matches!(toks[9], IRTok::End));
     }
 }
 
 
+#[derive(Debug)]
 enum IRTok {
     // func
     Func,

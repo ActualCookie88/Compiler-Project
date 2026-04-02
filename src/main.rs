@@ -2,9 +2,9 @@
 // A Handwritten Compiler Using Rust.
 
 /* HOW TO RUN EXAMPLES
-1. cd src/
-2. cargo run -- <examples_name>/<filename.tt>
-    e.g. cargo run -- <examples_ir2/break.tt
+   From the project root:
+   cargo run -- <examples_name>/<filename.tt>
+   e.g. cargo run -- examples_ir2/break.tt
 */
 use std::env;
 use std::fs;
@@ -221,4 +221,52 @@ mod tests {
         let tokens = lex(code).unwrap();
         assert!(parse_program(&tokens, &mut 0).is_err());
     }
+
+    #[test]
+    fn parse_rejects_undeclared_variable() {
+        let code = "
+            func main() {
+                x = 5;
+            }
+        ";
+        let tokens = lex(code).unwrap();
+        let result = parse_program(&tokens, &mut 0);
+        assert!(result.is_err());
+        let msg = result.unwrap_err();
+        assert!(
+            msg.contains("not declared") || msg.contains("used without declaration"),
+            "unexpected error: {}", msg
+        );
+    }
+
+    #[test]
+    fn parse_rejects_break_outside_loop() {
+        let code = "
+            func main() {
+                int a;
+                a = 1;
+                break;
+            }
+        ";
+        let tokens = lex(code).unwrap();
+        let result = parse_program(&tokens, &mut 0);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("outside of a loop"));
+    }
+
+    #[test]
+    fn parse_rejects_continue_outside_loop() {
+        let code = "
+            func main() {
+                int a;
+                a = 1;
+                continue;
+            }
+        ";
+        let tokens = lex(code).unwrap();
+        let result = parse_program(&tokens, &mut 0);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("outside of a loop"));
+    }
 }
+

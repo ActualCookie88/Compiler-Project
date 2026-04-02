@@ -1,6 +1,7 @@
 use crate::lexer::token::Token; // import token enum
 
-// This is a lexer that parses numbers and math operations
+// Single-pass tokenizer for the Teh Tarik language. Converts source code into
+// a Vec<Token>, returning a descriptive error on any unrecognized input.
 pub fn lex(code: &str) -> Result<Vec<Token>, String> {
   let bytes = code.as_bytes();
   let mut tokens: Vec<Token> = vec![];

@@ -1,74 +1,190 @@
-# Compiler design project
+# Teh Tarik Compiler
 
-By Luke Matsunaga
+A handwritten compiler for the **Teh Tarik** programming language, implemented in Rust. Built as part of CS152: Compiler Design at the University of California, Riverside. The compiler translates Teh Tarik source files (`.tt`) into a custom intermediate representation (IR), which is then executed by an interpreter.
 
-Project completed as part of a compilers course. 
+> The language is named after Teh Tarik, the national drink of Malaysia.
 
-Note: Full implementation is kept private to comply with course academic integrity policies.
+---
 
-## Objectives  
-- Understand the core phases of compiler construction  
-- Implement a working compiler using **Rust**  
-- Design a simple, structured programming language  
-- Explore parsing strategies and code generation techniques
+## Features
 
-## Structure  
+- **Handwritten lexer** — single-pass tokenizer with precise error messages for invalid tokens (e.g. malformed identifiers like `2a`, unrecognized symbols)
+- **Recursive descent parser** — top-down, single-pass parser with no backtracking; validates program structure and propagates descriptive syntax errors
+- **One-pass IR code generation** — directly emits IR during parsing with no intermediate AST; handles arithmetic, function calls, control flow, and arrays
+- **Operator precedence** — expression parsing is stratified across `parse_expression` → `parse_multiply_expression` → `parse_term`, correctly handling precedence without a grammar table
+- **Symbol table with semantic checks** — tracks declared variables and functions per scope; catches use-before-declaration, scalar/array type mismatches, calls to undefined functions, and `break`/`continue` outside of loops at compile time
+- **Control flow** — generates labeled IR for `while` loops, `if`/`else` branches, `break`, `continue`, and arbitrarily nested combinations
+- **Arrays** — supports fixed-size integer arrays with index expressions in both lvalue and rvalue positions
+- **Function calls** — supports multi-function programs with typed parameters and return values
+- **Test suite** — regression tests covering the lexer and parser, runnable with `cargo test`
 
-The project is divided into multiple phases, each corresponding to a key stage in compiler development:
+---
 
-### Phase 0: Foundations  
-- Introduction to Rust  
-- Language design and specification  
+## Language Overview
 
-### Phase 1: Lexer  
-- Tokenization of source code  
-- Handling keywords, identifiers, literals, and operators  
+Teh Tarik is a simple, statically typed imperative language. Below is a summary of supported features.
 
-### Phase 2: Parser  
-- Syntax analysis  
-- Construction of abstract syntax trees (AST)  
+| Feature               | Syntax                  |
+|-----------------------|-------------------------|
+| Variable declaration  | `int x;`                |
+| Array declaration     | `int [8] arr;`          |
+| Assignment            | `x = expr;`             |
+| Arithmetic            | `+ - * / %`             |
+| Comparison            | `< <= > >= == !=`       |
+| Print                 | `print(x);`             |
+| Read                  | `read(x);`              |
+| While loop            | `while cond { ... }`    |
+| If / else             | `if cond { } else { }`  |
+| Functions             | `func name(int a) { }`  |
+| Return                | `return expr;`          |
+| Break / Continue      | `break;` / `continue;`  |
+| Comments              | `# single line`         |
 
-### Phase 3: Simple Code Generation  
-- Translating AST into intermediate or target code  
-- Basic instruction generation  
+Identifiers must begin with a letter (A–Z or a–z) and may contain letters, digits, and underscores.
 
-### Phase 4: Complex Code Generation  
-- Advanced constructs (e.g., control flow, loops)  
-- Optimization and structured output
+---
 
+## Project Structure
 
-## Teh Tarik Programming Language
+```
+compiler-project/
+├── src/
+│   ├── lexer/
+│   │   ├── lexer.rs        # Tokenizer
+│   │   ├── token.rs        # Token enum
+│   │   └── mod.rs
+│   ├── parser/
+│   │   ├── program.rs      # Entry point, symbol table, parse_program
+│   │   ├── function.rs     # Function parsing and parameter handling
+│   │   ├── statement.rs    # Statement dispatch and control flow codegen
+│   │   ├── declaration.rs  # Variable and array declaration parsing
+│   │   ├── expression.rs   # Expression parsing with precedence
+│   │   └── mod.rs
+│   ├── interpreter/
+│   │   └── interpreter.rs  # IR interpreter (provided by course)
+│   ├── lib.rs
+│   └── main.rs
+├── examples_lexer/         # Lexer test programs (.tt)
+├── examples_parser/        # Parser test programs (.tt)
+├── examples_ir1/           # Phase 3 codegen test programs (.tt)
+├── examples_ir2/           # Phase 4 codegen test programs (.tt)
+├── Cargo.lock
+└── Cargo.toml
+```
 
-This programming language is named after Teh Tarik, which is the national drink of Malaysia.
+---
 
+## How to Build and Run
 
-## Documentation  
+### Prerequisites
 
-Detailed documentation for each phase can be found below:
+- [Rust](https://www.rust-lang.org/learn/get-started) (install via `rustup`)
 
-- [Phase 0: Introduction to Rust](phase_documentation/TehTarik.md)
+### Build
 
-- [Phase 0: Language Specification](phase_documentation/phase0.md)
+```bash
+cargo build
+```
 
-- [Phase 1: Building a Lexer](phase_documentation/phase1.md)
+### Run
 
-- [Phase 2: Building a Parser](phase_documentation/phase2.md)
+```bash
+cd src
+cargo run -- <path/to/file.tt>
+```
 
-- [Phase 3: Simple Code Generation](phase_documentation/phase3.md)
+**Examples:**
 
-- [Phase 4: Complex Code Generation](phase_documentation/phase4.md)
+```bash
+cargo run -- examples_ir2/loop.tt
+cargo run -- examples_ir2/break.tt
+cargo run -- examples_ir2/nested_loop.tt
+```
+
+The compiler will print the generated IR and then execute it using the interpreter.
+
+### Run Tests
+
+```bash
+cargo test
+```
+
+---
+
+## Example
+
+**Input (`loop.tt`):**
+```
+func main() {
+    int i;
+    i = 0;
+    while i < 10 {
+        print(i);
+        i = i + 1;
+    }
+}
+```
+
+**Generated IR:**
+```
+%func main()
+%int i
+%mov i, 0
+:loopbegin1
+%int _temp1
+%lt _temp1, i, 10
+%branch_ifn _temp1, :endloop1
+%out i
+%int _temp2
+%add _temp2, i, 1
+%mov i, _temp2
+%jmp :loopbegin1
+:endloop1
+%endfunc
+```
+
+**Output:**
+```
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+---
+
+## Semantic Error Checking
+
+The compiler detects the following errors at compile time and halts without emitting any IR:
+
+- Use of an undeclared variable
+- Use of a scalar variable as an array, or vice versa
+- Call to an undefined function
+- `break` or `continue` used outside of a loop
+
+Example error output:
+```
+Parser Error: Variable 'x' used without declaration
+Parser Error: break statement is outside a loop
+```
+
+---
+
+## Known Limitations
+
+- Error messages do not include line numbers or column positions
+- The IR interpreter (`interpreter.rs`) was provided by the course and is not original work
+
+---
 
 ## Acknowledgements
 
-This project was completed as part of the course **CS152: Compiler Design** at the University of California, Riverside.
+Completed as part of **CS152: Compiler Design** at the University of California, Riverside.
 
-I would like to thank the course instructor and teaching staff for providing:
-- The project specifications and grammar for the Teh Tarik programming language
-- Example test cases and guidance throughout each phase
-- The interpreter (`interpreter.rs`) used for executing the generated IR
-
-Course materials, including lecture notes and assignment descriptions, were used as references 
-for implementing the lexer, parser, and code generation phases of this project.
-
-All code written for this project is my own, except for any provided starter code or materials 
-explicitly given as part of the assignment.
+Course staff provided the project specifications, the grammar for the Teh Tarik language, example test programs, and the IR interpreter (`interpreter.rs`). All compiler code — the lexer, parser, symbol table, and code generator — is original work.
